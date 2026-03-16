@@ -1,5 +1,6 @@
 #include "cascade7/renderer.h"
 
+#include "bn_blending.h"
 #include "bn_bg_palettes.h"
 #include "bn_color.h"
 #include "bn_string.h"
@@ -8,7 +9,6 @@
 #include "bn_sprite_items_cascade7_discs.h"
 #include "bn_sprite_items_cascade7_explosion.h"
 #include "bn_sprite_items_cascade7_grid.h"
-#include "bn_sprite_items_cascade7_logo.h"
 
 #include "cascade7/scoring.h"
 
@@ -23,18 +23,21 @@ namespace cascade7
         constexpr int cell_size = 16;
         constexpr int sidebar_x = -112;
         constexpr int sidebar_value_x = -54;
-        constexpr int logo_y = -42;
         constexpr int preview_y = board_top - 18;
         constexpr int rise_frames = 18;
     }
 
     renderer::renderer() :
-        _logo_sprite(bn::sprite_items::cascade7_logo.create_sprite(-66, logo_y)),
         _preview_sprite(bn::sprite_items::cascade7_discs.create_sprite(0, preview_y, 0)),
+        _game_over_window(bn::rect_window::internal()),
+        _outside_window(bn::window::outside()),
         _text_generator(common::variable_8x8_sprite_font)
     {
         _text_generator.set_left_alignment();
         bn::bg_palettes::set_transparent_color(bn::color(0, 0, 0));
+        _game_over_window.set_boundaries(0, 0, 0, 0);
+        _game_over_window.set_show_blending(false);
+        _outside_window.set_show_blending(false);
 
         const bn::fixed_point grid_positions[4] = {
             bn::fixed_point(board_left + 32, board_top + 32),
@@ -87,6 +90,29 @@ namespace cascade7
     void renderer::draw(const game& game)
     {
         ++_animation_frame;
+
+        bn::blending::set_fade_alpha(0);
+        _game_over_window.set_boundaries(0, 0, 0, 0);
+        _outside_window.set_show_blending(false);
+
+        if(game.game_over())
+        {
+            bn::blending::set_black_fade_color();
+            bn::blending::set_fade_alpha(0.4);
+            _game_over_window.set_boundaries(-44, -116, 48, 12);
+            _game_over_window.set_show_blending(false);
+            _outside_window.set_show_blending(true);
+        }
+        else if(game.phase() == resolution_phase::flashing)
+        {
+            bn::blending::set_white_fade_color();
+            bn::blending::set_fade_alpha(((_animation_frame / 4) & 1) ? 0.12 : 0.04);
+        }
+        else if(game.phase() == resolution_phase::clearing)
+        {
+            bn::blending::set_white_fade_color();
+            bn::blending::set_fade_alpha(0.08);
+        }
 
         const int pulse_graphics_index = (_animation_frame / 12) % 2;
         const int preview_bob_offsets[] = { 0, -1, -2, -1, 0, 1, 0, -1 };
@@ -296,35 +322,35 @@ namespace cascade7
         {
             const int blink = (_animation_frame / 20) & 1;
 
-            _text_generator.generate(-24, -8, "GAME OVER", _text_sprites);
+            _text_generator.generate(-108, -12, "GAME OVER", _text_sprites);
 
             bn::string<24> final_score_text;
             final_score_text += "SCORE ";
             final_score_text += bn::to_string<10>(game.score());
-            _text_generator.generate(-28, 10, final_score_text, _text_sprites);
+            _text_generator.generate(-112, 8, final_score_text, _text_sprites);
 
             bn::string<24> high_score_text;
-            high_score_text += "HI ";
+            high_score_text += "HIGH ";
             high_score_text += bn::to_string<10>(game.high_score());
-            _text_generator.generate(-28, 22, high_score_text, _text_sprites);
+            _text_generator.generate(-112, 20, high_score_text, _text_sprites);
 
             bn::string<24> final_level_text;
             final_level_text += "LEVEL ";
             final_level_text += bn::to_string<4>(game.level());
-            _text_generator.generate(-28, 34, final_level_text, _text_sprites);
+            _text_generator.generate(-112, 32, final_level_text, _text_sprites);
 
             bn::string<24> best_chain_text;
             best_chain_text += "BEST ";
             best_chain_text += bn::to_string<4>(game.highest_chain());
-            _text_generator.generate(-28, 46, best_chain_text, _text_sprites);
+            _text_generator.generate(-112, 44, best_chain_text, _text_sprites);
 
             bn::string<24> reason_text = game.status_text();
-            _text_generator.generate(-28, 56, reason_text, _text_sprites);
+            _text_generator.generate(-112, 58, reason_text, _text_sprites);
 
             if(blink == 0)
             {
-                _text_generator.generate(-44, 68, "START RESET", _text_sprites);
-                _text_generator.generate(-44, 78, "SELECT NEW", _text_sprites);
+                _text_generator.generate(-112, 74, "START RESET", _text_sprites);
+                _text_generator.generate(-112, 84, "SELECT NEW", _text_sprites);
             }
         }
         else
@@ -332,7 +358,7 @@ namespace cascade7
             _text_generator.generate(sidebar_x, 8, "BY MICK", _text_sprites);
             _text_generator.generate(sidebar_x, 16, "SCHROEDER", _text_sprites);
             _draw_stat_line(30, "SCORE", game.score());
-            _draw_stat_line(42, "HI", game.high_score());
+            _draw_stat_line(42, "HIGH", game.high_score());
             _draw_stat_line(54, "LEVEL", game.level());
             _draw_stat_line(66, "RISE", game.blocks_remaining());
 

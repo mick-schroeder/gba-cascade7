@@ -2,9 +2,11 @@
 #define CASCADE7_RENDERER_H
 
 #include "bn_fixed_point.h"
+#include "bn_rect_window.h"
 #include "bn_sprite_ptr.h"
 #include "bn_sprite_text_generator.h"
 #include "bn_vector.h"
+#include "bn_window.h"
 
 #include "cascade7/game.h"
 #include "cascade7/types.h"
@@ -26,8 +28,9 @@ namespace cascade7
         void _draw_hud_text(const game& game);
         void _draw_stat_line(int y, const char* label, int value);
 
-        bn::sprite_ptr _logo_sprite;
         bn::sprite_ptr _preview_sprite;
+        bn::rect_window _game_over_window;
+        bn::window _outside_window;
         bn::vector<bn::sprite_ptr, 4> _grid_sprites;
         bn::vector<bn::sprite_ptr, 7> _column_highlight_sprites;
         bn::vector<bn::sprite_ptr, 49> _disc_sprites;
