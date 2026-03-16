@@ -11,9 +11,11 @@ CASCADE7 is an open-source Game Boy Advance puzzle game.
 
 ## Build
 
-From [`template`](/Users/mick/GitHub/butano-21.4.0/template):
+Clone with submodules so the local `butano/` dependency is present:
 
 ```sh
+git clone --recurse-submodules <your-repo-url>
+cd gba-cascade7
 make
 ```
 
