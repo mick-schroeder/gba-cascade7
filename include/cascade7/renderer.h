@@ -20,12 +20,13 @@ namespace cascade7
 
     private:
         [[nodiscard]] static bn::fixed_point _cell_position(int row, int column);
+        [[nodiscard]] bn::fixed_point _board_offset(const game& game) const;
         [[nodiscard]] static int _disc_graphics_index(const cell& cell);
         void _update_cascade_effects(const game& game);
         void _draw_hud_text(const game& game);
+        void _draw_stat_line(int y, const char* label, int value);
 
-        bn::sprite_ptr _logo_left_sprite;
-        bn::sprite_ptr _logo_right_sprite;
+        bn::sprite_ptr _logo_sprite;
         bn::sprite_ptr _preview_sprite;
         bn::vector<bn::sprite_ptr, 4> _grid_sprites;
         bn::vector<bn::sprite_ptr, 7> _column_highlight_sprites;

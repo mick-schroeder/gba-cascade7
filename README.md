@@ -6,7 +6,7 @@ CASCADE7 is an open-source Game Boy Advance puzzle game.
 
 - `LEFT/RIGHT`: move the drop cursor
 - `A`: drop the next piece
-- `SELECT`: restore the demo board
+- `SELECT`: start a new seeded board
 - `START`: reset to an empty board
 
 ## Build

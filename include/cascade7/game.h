@@ -34,6 +34,7 @@ namespace cascade7
         [[nodiscard]] int score() const;
         [[nodiscard]] int level() const;
         [[nodiscard]] int turn() const;
+        [[nodiscard]] int high_score() const;
         [[nodiscard]] int current_chain_depth() const;
         [[nodiscard]] int highest_chain() const;
         [[nodiscard]] int discs_cleared() const;
@@ -57,13 +58,28 @@ namespace cascade7
     private:
         void _update_resolution();
         [[nodiscard]] cell _generate_piece();
+        [[nodiscard]] cell _generate_numbered_piece();
+        [[nodiscard]] int _generate_value(bool prefer_high_values = false,
+                                          bool prefer_low_values = false,
+                                          bool unique_only = false,
+                                          const std::array<bool, max_disc_value + 1>& used_values = {});
+        [[nodiscard]] int _blank_spawn_chance() const;
         void _move_cursor(int delta);
         void _drop_piece();
         void _finish_resolution_step();
         void _raise_blank_row();
         void _set_status(const char* text);
+        void _load_save();
+        void _store_high_score_if_needed();
         void _reset_empty();
-        void _reset_demo();
+        void _reset_new_game();
+        void _seed_opening_board();
+        void _generate_rise_row();
+        void _remember_generated_piece(const cell& generated_piece);
+        void _play_clear_sound(int cleared_numbered_cells) const;
+        void _play_chain_sound() const;
+        void _play_rise_sound() const;
+        void _play_game_over_sound() const;
 
         board _board;
         bn::random _random;
@@ -71,6 +87,7 @@ namespace cascade7
         clear_mask _pending_clear_mask;
         int _cursor_column = board_size / 2;
         int _score = 0;
+        int _high_score = 0;
         int _level = 1;
         int _turn = 0;
         int _highest_chain = 0;
@@ -93,6 +110,9 @@ namespace cascade7
         bool _has_pending_rise_row = false;
         resolution_phase _phase = resolution_phase::idle;
         std::array<cell, board_size> _pending_rise_row{};
+        std::array<int, 4> _recent_piece_values{};
+        std::array<cell_kind, 4> _recent_piece_kinds{};
+        int _recent_piece_count = 0;
         bn::string<48> _status;
     };
 }

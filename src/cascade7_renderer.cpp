@@ -12,7 +12,7 @@
 
 #include "cascade7/scoring.h"
 
-#include "common_fixed_8x8_sprite_font.h"
+#include "common_variable_8x8_sprite_font.h"
 
 namespace cascade7
 {
@@ -22,16 +22,16 @@ namespace cascade7
         constexpr int board_top = -36;
         constexpr int cell_size = 16;
         constexpr int sidebar_x = -112;
-        constexpr int sidebar_value_x = -70;
+        constexpr int sidebar_value_x = -54;
+        constexpr int logo_y = -42;
         constexpr int preview_y = board_top - 18;
         constexpr int rise_frames = 18;
     }
 
     renderer::renderer() :
-        _logo_left_sprite(bn::sprite_items::cascade7_logo.create_sprite(-92, -64, 0)),
-        _logo_right_sprite(bn::sprite_items::cascade7_logo.create_sprite(-60, -64, 1)),
+        _logo_sprite(bn::sprite_items::cascade7_logo.create_sprite(-66, logo_y)),
         _preview_sprite(bn::sprite_items::cascade7_discs.create_sprite(0, preview_y, 0)),
-        _text_generator(common::fixed_8x8_sprite_font)
+        _text_generator(common::variable_8x8_sprite_font)
     {
         _text_generator.set_left_alignment();
         bn::bg_palettes::set_transparent_color(bn::color(0, 0, 0));
@@ -92,17 +92,18 @@ namespace cascade7
         const int preview_bob_offsets[] = { 0, -1, -2, -1, 0, 1, 0, -1 };
         const int preview_bob = preview_bob_offsets[(_animation_frame / 5) % 8];
         const bool show_play_cursor = ! game.resolving() && ! game.game_over();
+        const bn::fixed_point board_offset = _board_offset(game);
 
-        _preview_sprite.set_x(board_left + 8 + (game.cursor_column() * cell_size));
-        _preview_sprite.set_y(preview_y + preview_bob);
+        _preview_sprite.set_x(board_left + 8 + (game.cursor_column() * cell_size) + board_offset.x());
+        _preview_sprite.set_y(preview_y + preview_bob + board_offset.y());
         _preview_sprite.set_item(bn::sprite_items::cascade7_discs, _disc_graphics_index(game.next_piece()));
         _preview_sprite.set_visible(show_play_cursor);
 
         for(int row = 0; row < board_size; ++row)
         {
             bn::sprite_ptr& highlight_sprite = _column_highlight_sprites[row];
-            highlight_sprite.set_x(board_left + 8 + (game.cursor_column() * cell_size));
-            highlight_sprite.set_y(board_top + 8 + (row * cell_size));
+            highlight_sprite.set_x(board_left + 8 + (game.cursor_column() * cell_size) + board_offset.x());
+            highlight_sprite.set_y(board_top + 8 + (row * cell_size) + board_offset.y());
             highlight_sprite.set_item(bn::sprite_items::cascade7_column_highlight, pulse_graphics_index);
             highlight_sprite.set_visible(show_play_cursor);
         }
@@ -118,7 +119,7 @@ namespace cascade7
                 if(board_cell.occupied())
                 {
                     sprite.set_item(bn::sprite_items::cascade7_discs, _disc_graphics_index(board_cell));
-                    sprite.set_position(_cell_position(row, column));
+                    sprite.set_position(_cell_position(row, column) + board_offset);
                     sprite.set_visible(true);
                 }
                 else
@@ -142,8 +143,8 @@ namespace cascade7
                 bn::sprite_ptr& rise_sprite = _rise_sprites[column];
                 const cell& rise_cell = game.pending_rise_row()[column];
                 rise_sprite.set_item(bn::sprite_items::cascade7_discs, _disc_graphics_index(rise_cell));
-                rise_sprite.set_position(_cell_position(board_size - 1, column).x(),
-                                         _cell_position(board_size - 1, column).y() + rise_offset);
+                rise_sprite.set_position(_cell_position(board_size - 1, column).x() + board_offset.x(),
+                                         _cell_position(board_size - 1, column).y() + rise_offset + board_offset.y());
                 rise_sprite.set_visible(true);
             }
         }
@@ -156,6 +157,26 @@ namespace cascade7
         }
 
         _draw_hud_text(game);
+    }
+
+    bn::fixed_point renderer::_board_offset(const game& game) const
+    {
+        if(game.phase() == resolution_phase::clearing)
+        {
+            return bn::fixed_point(((_animation_frame / 2) & 1) ? 1 : -1, 0);
+        }
+
+        if(game.phase() == resolution_phase::flashing)
+        {
+            return bn::fixed_point(0, ((_animation_frame / 4) & 1) ? -1 : 0);
+        }
+
+        if(game.phase() == resolution_phase::rising)
+        {
+            return bn::fixed_point(0, -1);
+        }
+
+        return bn::fixed_point();
     }
 
     bn::fixed_point renderer::_cell_position(int row, int column)
@@ -181,6 +202,7 @@ namespace cascade7
 
     void renderer::_update_cascade_effects(const game& game)
     {
+        const bn::fixed_point board_offset = _board_offset(game);
         bool highlighted_rows[board_size] = {};
         bool highlighted_columns[board_size] = {};
         const clear_mask& clear = game.pending_clear_mask();
@@ -225,7 +247,8 @@ namespace cascade7
                 if(clear.cells[index])
                 {
                     const int pop_offset = clearing ? (((row + column + _animation_frame) & 1) + chain_nudge) : 0;
-                    disc_sprite.set_position(_cell_position(row, column).x(), _cell_position(row, column).y() - pop_offset);
+                    disc_sprite.set_position(_cell_position(row, column).x() + board_offset.x(),
+                                             _cell_position(row, column).y() + board_offset.y() - pop_offset);
 
                     if(flashing)
                     {
@@ -235,7 +258,7 @@ namespace cascade7
                     if(clearing && explosion_index < _explosion_sprites.size())
                     {
                         bn::sprite_ptr& explosion_sprite = _explosion_sprites[explosion_index];
-                        explosion_sprite.set_position(_cell_position(row, column));
+                        explosion_sprite.set_position(_cell_position(row, column) + board_offset);
                         explosion_sprite.set_item(bn::sprite_items::cascade7_explosion, explosion_frame);
                         explosion_sprite.set_visible(true);
                         disc_sprite.set_visible(flash_frame == 0);
@@ -246,12 +269,13 @@ namespace cascade7
                 {
                     const int nudge = (((_animation_frame / (chain_depth >= 4 ? 4 : 6)) + row + column) & 1) &&
                                       (flashing || clearing) ? 1 + chain_nudge : 0;
-                    disc_sprite.set_position(_cell_position(row, column).x(), _cell_position(row, column).y() - nudge);
+                    disc_sprite.set_position(_cell_position(row, column).x() + board_offset.x(),
+                                             _cell_position(row, column).y() + board_offset.y() - nudge);
                     disc_sprite.set_visible(true);
                 }
                 else
                 {
-                    disc_sprite.set_position(_cell_position(row, column));
+                    disc_sprite.set_position(_cell_position(row, column) + board_offset);
                     disc_sprite.set_visible(true);
                 }
             }
@@ -268,31 +292,6 @@ namespace cascade7
     {
         _text_sprites.clear();
 
-        bn::string<24> score_line;
-        score_line += "SCORE: ";
-        score_line += bn::to_string<8>(game.score());
-        _text_generator.generate(sidebar_x, -10, score_line, _text_sprites);
-
-        bn::string<16> level_line;
-        level_line += "LEVEL: ";
-        level_line += bn::to_string<4>(game.level());
-        _text_generator.generate(sidebar_x, 14, level_line, _text_sprites);
-
-        bn::string<16> next_line;
-        next_line += "NEXT: ";
-        next_line += bn::to_string<4>(game.blocks_remaining());
-        _text_generator.generate(sidebar_x, 38, next_line, _text_sprites);
-
-        bn::string<16> best_line;
-        best_line += "BEST: ";
-        best_line += bn::to_string<4>(game.highest_chain());
-        _text_generator.generate(sidebar_x, 62, best_line, _text_sprites);
-
-        bn::string<16> cleared_line;
-        cleared_line += "CLR: ";
-        cleared_line += bn::to_string<6>(game.discs_cleared());
-        _text_generator.generate(sidebar_x, 86, cleared_line, _text_sprites);
-
         if(game.game_over())
         {
             const int blink = (_animation_frame / 20) & 1;
@@ -304,49 +303,66 @@ namespace cascade7
             final_score_text += bn::to_string<10>(game.score());
             _text_generator.generate(-28, 10, final_score_text, _text_sprites);
 
+            bn::string<24> high_score_text;
+            high_score_text += "HI ";
+            high_score_text += bn::to_string<10>(game.high_score());
+            _text_generator.generate(-28, 22, high_score_text, _text_sprites);
+
             bn::string<24> final_level_text;
             final_level_text += "LEVEL ";
             final_level_text += bn::to_string<4>(game.level());
-            _text_generator.generate(-28, 22, final_level_text, _text_sprites);
+            _text_generator.generate(-28, 34, final_level_text, _text_sprites);
 
             bn::string<24> best_chain_text;
             best_chain_text += "BEST ";
             best_chain_text += bn::to_string<4>(game.highest_chain());
-            _text_generator.generate(-28, 34, best_chain_text, _text_sprites);
+            _text_generator.generate(-28, 46, best_chain_text, _text_sprites);
 
             bn::string<24> reason_text = game.status_text();
-            _text_generator.generate(-28, 46, reason_text, _text_sprites);
+            _text_generator.generate(-28, 56, reason_text, _text_sprites);
 
             if(blink == 0)
             {
-                _text_generator.generate(-44, 58, "START RETRY", _text_sprites);
-                _text_generator.generate(-44, 70, "SELECT DEMO", _text_sprites);
+                _text_generator.generate(-44, 68, "START RESET", _text_sprites);
+                _text_generator.generate(-44, 78, "SELECT NEW", _text_sprites);
             }
         }
         else
         {
-            bn::string<24> message_text = game.status_text();
-            _text_generator.generate(sidebar_x, -56, "BY MICK", _text_sprites);
-            _text_generator.generate(sidebar_x, -46, "SCHROEDER", _text_sprites);
-            _text_generator.generate(sidebar_x, -30, "STATUS:", _text_sprites);
-            _text_generator.generate(sidebar_x, -18, message_text, _text_sprites);
+            _text_generator.generate(sidebar_x, 8, "BY MICK", _text_sprites);
+            _text_generator.generate(sidebar_x, 16, "SCHROEDER", _text_sprites);
+            _draw_stat_line(30, "SCORE", game.score());
+            _draw_stat_line(42, "HI", game.high_score());
+            _draw_stat_line(54, "LEVEL", game.level());
+            _draw_stat_line(66, "RISE", game.blocks_remaining());
 
             if(game.score_popup_timer() > 0)
             {
-                const int popup_y = board_top - 28 - ((scoring::popup_frames - game.score_popup_timer()) / 6);
+                const int popup_y = board_top - 20 - ((scoring::popup_frames - game.score_popup_timer()) / 4);
                 bn::string<24> popup_text;
                 popup_text += '+';
                 popup_text += bn::to_string<10>(game.score_popup_value());
-                _text_generator.generate(board_left + 28, popup_y, popup_text, _text_sprites);
+                _text_generator.generate(board_left + 24, popup_y, popup_text, _text_sprites);
 
                 if(game.score_popup_chain() >= scoring::large_chain_threshold)
                 {
                     bn::string<24> chain_popup_text;
-                    chain_popup_text += "CHAIN ";
+                    chain_popup_text += "CASCADE x";
                     chain_popup_text += bn::to_string<4>(game.score_popup_chain());
-                    _text_generator.generate(board_left + 18, popup_y - 10, chain_popup_text, _text_sprites);
+                    _text_generator.generate(board_left + 14, popup_y - 10, chain_popup_text, _text_sprites);
                 }
             }
         }
+    }
+
+    void renderer::_draw_stat_line(int y, const char* label, int value)
+    {
+        if(label[0])
+        {
+            _text_generator.generate(sidebar_x, y, label, _text_sprites);
+        }
+
+        bn::string<16> value_text = bn::to_string<10>(value);
+        _text_generator.generate(sidebar_value_x, y, value_text, _text_sprites);
     }
 }

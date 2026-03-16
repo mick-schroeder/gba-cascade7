@@ -34,7 +34,7 @@ namespace cascade7
         _cells.fill(empty_cell);
     }
 
-    void board::load_demo_layout()
+    void board::load_seeded_layout()
     {
         clear();
 

@@ -14,7 +14,7 @@ namespace cascade7
         board();
 
         void clear();
-        void load_demo_layout();
+        void load_seeded_layout();
 
         [[nodiscard]] const cell& at(int row, int column) const;
         [[nodiscard]] cell& at(int row, int column);
