@@ -19,9 +19,9 @@ namespace cascade7
         };
 
         constexpr int settle_frames = 6;
-        constexpr int flash_frames = 16;
-        constexpr int clear_frames = 10;
-        constexpr int gravity_step_frames = 4;
+        constexpr int flash_frames = 18;
+        constexpr int clear_frames = 12;
+        constexpr int gravity_step_frames = 3;
         constexpr int rise_frames = 18;
         constexpr int starting_turns_per_level = 29;
         constexpr int minimum_turns_per_level = 5;
