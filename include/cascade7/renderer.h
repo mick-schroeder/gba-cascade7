@@ -1,0 +1,41 @@
+#ifndef CASCADE7_RENDERER_H
+#define CASCADE7_RENDERER_H
+
+#include "bn_fixed_point.h"
+#include "bn_sprite_ptr.h"
+#include "bn_sprite_text_generator.h"
+#include "bn_vector.h"
+
+#include "cascade7/game.h"
+#include "cascade7/types.h"
+
+namespace cascade7
+{
+    class renderer
+    {
+    public:
+        renderer();
+
+        void draw(const game& game);
+
+    private:
+        [[nodiscard]] static bn::fixed_point _cell_position(int row, int column);
+        [[nodiscard]] static int _disc_graphics_index(const cell& cell);
+        void _update_cascade_effects(const game& game);
+        void _draw_hud_text(const game& game);
+
+        bn::sprite_ptr _logo_left_sprite;
+        bn::sprite_ptr _logo_right_sprite;
+        bn::sprite_ptr _preview_sprite;
+        bn::vector<bn::sprite_ptr, 4> _grid_sprites;
+        bn::vector<bn::sprite_ptr, 7> _column_highlight_sprites;
+        bn::vector<bn::sprite_ptr, 49> _disc_sprites;
+        bn::vector<bn::sprite_ptr, 7> _rise_sprites;
+        bn::vector<bn::sprite_ptr, 8> _explosion_sprites;
+        bn::sprite_text_generator _text_generator;
+        bn::vector<bn::sprite_ptr, 112> _text_sprites;
+        int _animation_frame = 0;
+    };
+}
+
+#endif
