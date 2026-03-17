@@ -3,6 +3,7 @@
 
 #include "bn_fixed_point.h"
 #include "bn_rect_window.h"
+#include "bn_regular_bg_ptr.h"
 #include "bn_sprite_ptr.h"
 #include "bn_sprite_text_generator.h"
 #include "bn_vector.h"
@@ -28,6 +29,7 @@ namespace cascade7
         void _draw_hud_text(const game& game);
         void _draw_stat_line(int y, const char* label, int value);
 
+        bn::regular_bg_ptr _logo_bg;
         bn::sprite_ptr _preview_sprite;
         bn::rect_window _game_over_window;
         bn::window _outside_window;

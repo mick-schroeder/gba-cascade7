@@ -5,6 +5,7 @@
 #include "bn_color.h"
 #include "bn_string.h"
 
+#include "bn_regular_bg_items_cascade7_logo.h"
 #include "bn_sprite_items_cascade7_column_highlight.h"
 #include "bn_sprite_items_cascade7_discs.h"
 #include "bn_sprite_items_cascade7_explosion.h"
@@ -18,16 +19,17 @@ namespace cascade7
 {
     namespace
     {
-        constexpr int board_left = -4;
-        constexpr int board_top = -36;
+        constexpr int board_left = -14;
+        constexpr int board_top = -42;
         constexpr int cell_size = 16;
-        constexpr int sidebar_x = -112;
-        constexpr int sidebar_value_x = -54;
+        constexpr int sidebar_x = -115;
+        constexpr int sidebar_value_x = -70;
         constexpr int preview_y = board_top - 18;
         constexpr int rise_frames = 18;
     }
 
     renderer::renderer() :
+        _logo_bg(bn::regular_bg_items::cascade7_logo.create_bg(8, 48)),
         _preview_sprite(bn::sprite_items::cascade7_discs.create_sprite(0, preview_y, 0)),
         _game_over_window(bn::rect_window::internal()),
         _outside_window(bn::window::outside()),
@@ -35,6 +37,7 @@ namespace cascade7
     {
         _text_generator.set_left_alignment();
         bn::bg_palettes::set_transparent_color(bn::color(0, 0, 0));
+        _logo_bg.set_priority(3);
         _game_over_window.set_boundaries(0, 0, 0, 0);
         _game_over_window.set_show_blending(false);
         _outside_window.set_show_blending(false);
@@ -355,12 +358,12 @@ namespace cascade7
         }
         else
         {
-            _text_generator.generate(sidebar_x, 8, "BY MICK", _text_sprites);
-            _text_generator.generate(sidebar_x, 16, "SCHROEDER", _text_sprites);
-            _draw_stat_line(30, "SCORE", game.score());
-            _draw_stat_line(42, "HIGH", game.high_score());
-            _draw_stat_line(54, "LEVEL", game.level());
-            _draw_stat_line(66, "RISE", game.blocks_remaining());
+            _text_generator.generate(sidebar_x, -30, "BY MICK", _text_sprites);
+            _text_generator.generate(sidebar_x, -20, "SCHROEDER", _text_sprites);
+            _draw_stat_line(28, "SCORE", game.score());
+            _draw_stat_line(44, "HIGH", game.high_score());
+            _draw_stat_line(60, "LEVEL", game.level());
+            _draw_stat_line(76, "RISE", game.blocks_remaining());
 
             if(game.score_popup_timer() > 0)
             {
