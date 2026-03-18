@@ -25,7 +25,9 @@ namespace cascade7
     {
         none,
         pause_menu,
-        game_over_menu
+        game_over_menu,
+        help_screen,
+        about_screen
     };
 
     class game

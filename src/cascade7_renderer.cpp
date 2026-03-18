@@ -22,7 +22,8 @@ namespace cascade7
         constexpr int board_left = -14;
         constexpr int board_top = -42;
         constexpr int cell_size = 16;
-        constexpr int sidebar_x = -105;
+        constexpr int hud_x = -105;
+        constexpr int sidebar_x = -112;
         constexpr int sidebar_value_x = -65;
         constexpr int preview_y = board_top - 18;
         constexpr int rise_frames = 18;
@@ -100,6 +101,8 @@ namespace cascade7
         _game_over_window.set_show_bg(_logo_bg, true);
         _outside_window.set_show_bg(_logo_bg, true);
 
+        // Menus hide the scenic background inside the window rectangle so the
+        // baked-in HUD art doesn't show through behind the menu text.
         if(game.overlay() == overlay_mode::game_over_menu)
         {
             bn::blending::set_black_fade_color();
@@ -109,7 +112,9 @@ namespace cascade7
             _game_over_window.set_show_blending(false);
             _outside_window.set_show_blending(true);
         }
-        else if(game.overlay() == overlay_mode::pause_menu)
+        else if(game.overlay() == overlay_mode::pause_menu ||
+                game.overlay() == overlay_mode::help_screen ||
+                game.overlay() == overlay_mode::about_screen)
         {
             bn::blending::set_black_fade_color();
             bn::blending::set_fade_alpha(0.32);
@@ -135,6 +140,8 @@ namespace cascade7
         const bool show_play_cursor = ! game.resolving() && ! game.game_over() && game.overlay() == overlay_mode::none;
         const bn::fixed_point board_offset = _board_offset(game);
 
+        // The board frame lives in the background; gameplay pieces stay as
+        // sprites on top so they can animate independently.
         _preview_sprite.set_x(board_left + 8 + (game.cursor_column() * cell_size) + board_offset.x());
         _preview_sprite.set_y(preview_y + preview_bob + board_offset.y());
         _preview_sprite.set_item(bn::sprite_items::cascade7_discs, _disc_graphics_index(game.next_piece()));
@@ -335,44 +342,60 @@ namespace cascade7
 
         if(game.overlay() == overlay_mode::game_over_menu)
         {
-            _text_generator.generate(-108, -12, "GAME OVER", _text_sprites);
+            _text_generator.generate(sidebar_x, -12, "*GAME OVER*", _text_sprites);
 
             bn::string<24> final_score_text;
             final_score_text += "SCORE ";
             final_score_text += bn::to_string<10>(game.score());
-            _text_generator.generate(-112, 8, final_score_text, _text_sprites);
+            _text_generator.generate(sidebar_x, 8, final_score_text, _text_sprites);
 
             bn::string<24> high_score_text;
             high_score_text += "HIGH ";
             high_score_text += bn::to_string<10>(game.high_score());
-            _text_generator.generate(-112, 20, high_score_text, _text_sprites);
+            _text_generator.generate(sidebar_x, 20, high_score_text, _text_sprites);
 
             bn::string<24> final_level_text;
             final_level_text += "LEVEL ";
             final_level_text += bn::to_string<4>(game.level());
-            _text_generator.generate(-112, 32, final_level_text, _text_sprites);
+            _text_generator.generate(sidebar_x, 32, final_level_text, _text_sprites);
 
             bn::string<24> best_chain_text;
             best_chain_text += "BEST ";
             best_chain_text += bn::to_string<4>(game.highest_chain());
-            _text_generator.generate(-112, 44, best_chain_text, _text_sprites);
+            _text_generator.generate(sidebar_x, 44, best_chain_text, _text_sprites);
 
-            bn::string<24> reason_text = game.status_text();
-            _text_generator.generate(-112, 58, reason_text, _text_sprites);
-            _text_generator.generate(-112, 74, game.menu_selection() == 0 ? "> RESET BOARD" : "  RESET BOARD",
-                                     _text_sprites);
-            _text_generator.generate(-112, 84, game.menu_selection() == 1 ? "> NEW GAME" : "  NEW GAME",
+            _text_generator.generate(sidebar_x, 64, game.menu_selection() == 0 ? "> NEW GAME" : "  NEW GAME",
                                      _text_sprites);
         }
         else if(game.overlay() == overlay_mode::pause_menu)
         {
             _text_generator.generate(-108, -8, "PAUSED", _text_sprites);
-            _text_generator.generate(-112, 12, game.menu_selection() == 0 ? "> CONTINUE" : "  CONTINUE",
+            _text_generator.generate(sidebar_x, 12, game.menu_selection() == 0 ? "> CONTINUE" : "  CONTINUE",
                                      _text_sprites);
-            _text_generator.generate(-112, 24, game.menu_selection() == 1 ? "> NEW GAME" : "  NEW GAME",
+            _text_generator.generate(sidebar_x, 24, game.menu_selection() == 1 ? "> HELP" : "  HELP",
                                      _text_sprites);
-            _text_generator.generate(-112, 46, "A CONFIRM", _text_sprites);
-            _text_generator.generate(-112, 56, "B CANCEL", _text_sprites);
+            _text_generator.generate(sidebar_x, 36, game.menu_selection() == 2 ? "> ABOUT" : "  ABOUT",
+                                     _text_sprites);
+            _text_generator.generate(sidebar_x, 48, game.menu_selection() == 3 ? "> NEW GAME" : "  NEW GAME",
+                                     _text_sprites);
+            _text_generator.generate(sidebar_x, 70, "A CONFIRM", _text_sprites);
+            _text_generator.generate(sidebar_x, 80, "B CANCEL", _text_sprites);
+        }
+        else if(game.overlay() == overlay_mode::help_screen)
+        {
+            _text_generator.generate(sidebar_x, -18, "HELP", _text_sprites);
+            _text_generator.generate(sidebar_x, -2, "A DROP DISC", _text_sprites);
+            _text_generator.generate(sidebar_x, 10, "LEFT/RIGHT MOVE", _text_sprites);
+            _text_generator.generate(sidebar_x, 22, "MATCH DISC # TO", _text_sprites);
+             _text_generator.generate(sidebar_x, 34, "# OF DISCS IN ROW OR COLUMN", _text_sprites);
+            _text_generator.generate(sidebar_x, 60, "B BACK", _text_sprites);
+        }
+        else if(game.overlay() == overlay_mode::about_screen)
+        {
+            _text_generator.generate(sidebar_x, -18, "CASCADE7", _text_sprites);
+            _text_generator.generate(sidebar_x, -2, "BY MICK SCHROEDER", _text_sprites);
+            _text_generator.generate(sidebar_x, 10, "CASCADE7.MICKSCHROEDER.COM", _text_sprites);
+            _text_generator.generate(sidebar_x, 28, "B BACK", _text_sprites);
         }
         else
         {
@@ -406,7 +429,7 @@ namespace cascade7
     {
         if(label[0])
         {
-            _text_generator.generate(sidebar_x, y, label, _text_sprites);
+            _text_generator.generate(hud_x, y, label, _text_sprites);
         }
 
         bn::string<16> value_text = bn::to_string<10>(value);

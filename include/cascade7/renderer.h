@@ -39,7 +39,7 @@ namespace cascade7
         bn::vector<bn::sprite_ptr, 7> _rise_sprites;
         bn::vector<bn::sprite_ptr, 8> _explosion_sprites;
         bn::sprite_text_generator _text_generator;
-        bn::vector<bn::sprite_ptr, 112> _text_sprites;
+        bn::vector<bn::sprite_ptr, 160> _text_sprites;
         int _animation_frame = 0;
     };
 }

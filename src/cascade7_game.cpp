@@ -51,12 +51,14 @@ namespace cascade7
             --_score_popup_timer;
         }
 
+        // Overlay pages own input until they are dismissed.
         if(_overlay != overlay_mode::none)
         {
             _handle_overlay_input();
             return;
         }
 
+        // Resolution phases advance automatically between player moves.
         if(_phase != resolution_phase::idle)
         {
             _update_resolution();
@@ -270,7 +272,12 @@ namespace cascade7
 
     void game::_handle_overlay_input()
     {
-        const int option_count = _overlay == overlay_mode::pause_menu ? 2 : 1;
+        int option_count = 1;
+
+        if(_overlay == overlay_mode::pause_menu)
+        {
+            option_count = 4;
+        }
 
         if(bn::keypad::up_pressed())
         {
@@ -284,7 +291,9 @@ namespace cascade7
             return;
         }
 
-        if(_overlay == overlay_mode::pause_menu &&
+        if((_overlay == overlay_mode::pause_menu ||
+            _overlay == overlay_mode::help_screen ||
+            _overlay == overlay_mode::about_screen) &&
            (bn::keypad::b_pressed() || bn::keypad::start_pressed() || bn::keypad::select_pressed()))
         {
             _close_overlay();
@@ -324,6 +333,7 @@ namespace cascade7
 
     void game::_confirm_overlay_selection()
     {
+        // The pause menu can branch into read-only pages or restart the run.
         if(_overlay == overlay_mode::pause_menu)
         {
             switch(_menu_selection)
@@ -333,6 +343,16 @@ namespace cascade7
                 break;
 
             case 1:
+                _overlay = overlay_mode::help_screen;
+                _menu_selection = 0;
+                break;
+
+            case 2:
+                _overlay = overlay_mode::about_screen;
+                _menu_selection = 0;
+                break;
+
+            case 3:
                 _overlay = overlay_mode::none;
                 _menu_selection = 0;
                 _reset_new_game();
@@ -342,6 +362,14 @@ namespace cascade7
                 break;
             }
 
+            return;
+        }
+
+        if(_overlay == overlay_mode::help_screen || _overlay == overlay_mode::about_screen)
+        {
+            _overlay = overlay_mode::pause_menu;
+            _menu_selection = 0;
+            _set_status("PAUSED");
             return;
         }
 
@@ -369,6 +397,7 @@ namespace cascade7
         switch(_phase)
         {
         case resolution_phase::settle:
+            // Matches are only checked after discs have finished settling.
             _pending_clear_mask = rules::find_matches(_board);
 
             if(_pending_clear_mask.count)
@@ -476,6 +505,8 @@ namespace cascade7
     int game::_generate_value(bool prefer_high_values, bool prefer_low_values, bool unique_only,
                               const std::array<bool, max_disc_value + 1>& used_values)
     {
+        // Piece values stay random, but the weights bias toward numbers that are
+        // more likely to matter on the current board.
         std::array<int, max_disc_value + 1> weights = base_value_weights;
         int occupied_cells = 0;
         int blank_cells = 0;
@@ -623,6 +654,8 @@ namespace cascade7
 
     int game::_blank_spawn_chance() const
     {
+        // Blank pressure rises with level and danger, then backs off if the board
+        // is already saturated with blanks.
         int occupied_cells = 0;
         int blank_cells = 0;
 
@@ -719,11 +752,13 @@ namespace cascade7
         _phase_timer = settle_frames;
         _set_status("DROP");
 
+        // The preview is always rolled immediately after a successful drop.
         _next_piece = _generate_piece();
     }
 
     void game::_finish_resolution_step()
     {
+        // One turn ends only after all clears, gravity steps and row rises finish.
         _phase = resolution_phase::idle;
         _last_clear_count = _cascade_cleared_cells;
         _last_chain_count = _cascade_chain_count;
@@ -823,6 +858,7 @@ namespace cascade7
 
         save_data new_data;
 
+        // Initialize SRAM the first time we see an unknown save signature.
         for(int index = 0; index < 8; ++index)
         {
             new_data.format_tag[index] = save_format_tag[index];
@@ -916,6 +952,8 @@ namespace cascade7
         const std::array<cell_kind, 4> starting_recent_kinds = _recent_piece_kinds;
         const int starting_recent_count = _recent_piece_count;
 
+        // Retry a few times to get a random opening that has spread and no
+        // immediate auto-clear before the player acts.
         for(int attempt = 0; attempt < 32; ++attempt)
         {
             _board.clear();
@@ -1009,6 +1047,8 @@ namespace cascade7
 
     void game::_generate_rise_row()
     {
+        // Rise rows use a separate generator so they feel authored instead of
+        // like seven unrelated random blanks.
         static const int count_patterns[][board_size] = {
             { 2, 2, 2, 1, 0, 0, 0 },
             { 3, 2, 1, 1, 0, 0, 0 },
