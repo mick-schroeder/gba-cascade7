@@ -26,6 +26,7 @@ namespace cascade7
         [[nodiscard]] bn::fixed_point _board_offset(const game& game) const;
         [[nodiscard]] bn::fixed_point _blank_effect_offset(const game& game, int row, int column,
                                                            const cell& board_cell) const;
+        [[nodiscard]] bn::fixed_point _landing_effect_offset(const game& game, int row, int column) const;
         [[nodiscard]] static int _disc_graphics_index(const cell& cell);
         void _update_cascade_effects(const game& game);
         void _draw_hud_text(const game& game);

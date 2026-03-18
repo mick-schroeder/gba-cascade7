@@ -56,6 +56,26 @@ namespace cascade7
             --_blank_effect_timer;
         }
 
+        if(_landing_timer > 0)
+        {
+            --_landing_timer;
+        }
+
+        if(_all_clear_timer > 0)
+        {
+            --_all_clear_timer;
+        }
+
+        if(_rise_impact_timer > 0)
+        {
+            --_rise_impact_timer;
+        }
+
+        if(_level_up_timer > 0)
+        {
+            --_level_up_timer;
+        }
+
         // Overlay pages own input until they are dismissed.
         if(_overlay != overlay_mode::none)
         {
@@ -270,6 +290,36 @@ namespace cascade7
         return _revealed_blank_count;
     }
 
+    int game::landing_timer() const
+    {
+        return _landing_timer;
+    }
+
+    int game::last_drop_row() const
+    {
+        return _last_drop_row;
+    }
+
+    int game::last_drop_column() const
+    {
+        return _last_drop_column;
+    }
+
+    int game::all_clear_timer() const
+    {
+        return _all_clear_timer;
+    }
+
+    int game::rise_impact_timer() const
+    {
+        return _rise_impact_timer;
+    }
+
+    int game::level_up_timer() const
+    {
+        return _level_up_timer;
+    }
+
     const clear_mask& game::pending_clear_mask() const
     {
         return _pending_clear_mask;
@@ -462,12 +512,23 @@ namespace cascade7
 
             if(clear_result.cleared_numbered_cells)
             {
-                _play_clear_sound(clear_result.cleared_numbered_cells);
-
                 const int chain_score = scoring::per_disc_score(_cascade_chain_count) *
                                         clear_result.cleared_numbered_cells;
                 _score += chain_score;
                 _last_move_score += chain_score;
+            }
+
+            if(_revealed_blank_count)
+            {
+                _play_reveal_sound(_revealed_blank_count);
+            }
+            else if(_cracked_blank_count)
+            {
+                _play_crack_sound(_cracked_blank_count);
+            }
+            else if(clear_result.cleared_numbered_cells)
+            {
+                _play_clear_sound(clear_result.cleared_numbered_cells);
             }
 
             _phase = resolution_phase::gravity;
@@ -779,12 +840,17 @@ namespace cascade7
 
         [[maybe_unused]] int ignored_row = 0;
 
-        if(! _board.drop(_cursor_column, _next_piece, ignored_row))
+        int drop_row = 0;
+
+        if(! _board.drop(_cursor_column, _next_piece, drop_row))
         {
             _set_status("COLUMN FULL");
             return;
         }
 
+        _last_drop_column = _cursor_column;
+        _last_drop_row = drop_row;
+        _landing_timer = 8;
         ++_turn;
         --_turns_until_rise;
         _blocks_remaining = _turns_until_rise;
@@ -833,6 +899,7 @@ namespace cascade7
         {
             _score += scoring::full_clear_bonus;
             _last_move_score += scoring::full_clear_bonus;
+            _all_clear_timer = 24;
             _set_status("ALL CLEAR!");
         }
 
@@ -945,6 +1012,8 @@ namespace cascade7
         _has_pending_rise_row = true;
         _phase = resolution_phase::rising;
         _phase_timer = rise_frames;
+        _rise_impact_timer = 16;
+        _level_up_timer = 48;
         ++_level;
         _max_blocks = turns_for_level(_level);
         _score += scoring::rise_bonus;
@@ -982,6 +1051,12 @@ namespace cascade7
         _blank_effect_timer = 0;
         _cracked_blank_count = 0;
         _revealed_blank_count = 0;
+        _landing_timer = 0;
+        _last_drop_row = -1;
+        _last_drop_column = -1;
+        _all_clear_timer = 0;
+        _rise_impact_timer = 0;
+        _level_up_timer = 0;
         _cursor_repeat_frames = 0;
         _cursor_repeat_direction = 0;
         _recent_piece_count = 0;
@@ -1164,6 +1239,18 @@ namespace cascade7
     {
         const bn::fixed volume = cleared_numbered_cells >= 4 ? bn::fixed(0.9) : bn::fixed(0.7);
         bn::sound_items::cascade7_clear.play(volume);
+    }
+
+    void game::_play_crack_sound(int cracked_blank_cells) const
+    {
+        const bn::fixed volume = cracked_blank_cells >= 2 ? bn::fixed(0.78) : bn::fixed(0.66);
+        bn::sound_items::cascade7_crack.play(volume);
+    }
+
+    void game::_play_reveal_sound(int revealed_numbered_cells) const
+    {
+        const bn::fixed volume = revealed_numbered_cells >= 2 ? bn::fixed(0.95) : bn::fixed(0.82);
+        bn::sound_items::cascade7_reveal.play(volume);
     }
 
     void game::_play_chain_sound() const

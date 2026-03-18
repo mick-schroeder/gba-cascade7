@@ -9,7 +9,7 @@ namespace cascade7::scoring
     constexpr int rise_bonus = 7000;
     constexpr int large_chain_threshold = 3;
     constexpr int large_popup_score_threshold = 1500;
-    constexpr int popup_frames = 45;
+    constexpr int popup_frames = 72;
     constexpr std::array<int, 16> per_disc_curve = {
         0, 7, 40, 109, 224, 391, 617, 907, 1267, 1702, 2217, 2817, 3506, 4290, 5172, 6157
     };

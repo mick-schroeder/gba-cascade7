@@ -64,6 +64,12 @@ namespace cascade7
         [[nodiscard]] int blank_effect_timer() const;
         [[nodiscard]] int cracked_blank_count() const;
         [[nodiscard]] int revealed_blank_count() const;
+        [[nodiscard]] int landing_timer() const;
+        [[nodiscard]] int last_drop_row() const;
+        [[nodiscard]] int last_drop_column() const;
+        [[nodiscard]] int all_clear_timer() const;
+        [[nodiscard]] int rise_impact_timer() const;
+        [[nodiscard]] int level_up_timer() const;
         [[nodiscard]] const clear_mask& pending_clear_mask() const;
         [[nodiscard]] const std::array<bool, board_size * board_size>& cracked_effect_mask() const;
         [[nodiscard]] const std::array<bool, board_size * board_size>& revealed_effect_mask() const;
@@ -97,6 +103,8 @@ namespace cascade7
         void _seed_opening_board();
         void _generate_rise_row();
         void _remember_generated_piece(const cell& generated_piece);
+        void _play_crack_sound(int cracked_blank_cells) const;
+        void _play_reveal_sound(int revealed_numbered_cells) const;
         void _play_clear_sound(int cleared_numbered_cells) const;
         void _play_chain_sound() const;
         void _play_rise_sound() const;
@@ -131,6 +139,12 @@ namespace cascade7
         int _blank_effect_timer = 0;
         int _cracked_blank_count = 0;
         int _revealed_blank_count = 0;
+        int _landing_timer = 0;
+        int _last_drop_row = -1;
+        int _last_drop_column = -1;
+        int _all_clear_timer = 0;
+        int _rise_impact_timer = 0;
+        int _level_up_timer = 0;
         bool _game_over = false;
         bool _has_pending_rise_row = false;
         resolution_phase _phase = resolution_phase::idle;

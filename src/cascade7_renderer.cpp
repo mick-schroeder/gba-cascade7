@@ -123,6 +123,11 @@ namespace cascade7
             _game_over_window.set_show_blending(false);
             _outside_window.set_show_blending(true);
         }
+        else if(game.all_clear_timer() > 0)
+        {
+            bn::blending::set_white_fade_color();
+            bn::blending::set_fade_alpha(((_animation_frame / 2) & 1) ? 0.22 : 0.1);
+        }
         else if(game.blank_effect_timer() > 0)
         {
             bn::blending::set_white_fade_color();
@@ -181,7 +186,8 @@ namespace cascade7
                 {
                     sprite.set_item(bn::sprite_items::cascade7_discs, _disc_graphics_index(board_cell));
                     sprite.set_position(_cell_position(row, column) + board_offset +
-                                        _blank_effect_offset(game, row, column, board_cell));
+                                        _blank_effect_offset(game, row, column, board_cell) +
+                                        _landing_effect_offset(game, row, column));
                     sprite.set_visible(true);
                 }
                 else
@@ -223,6 +229,17 @@ namespace cascade7
 
     bn::fixed_point renderer::_board_offset(const game& game) const
     {
+        if(game.all_clear_timer() > 0)
+        {
+            return bn::fixed_point(((_animation_frame / 2) & 1) ? 1 : -1,
+                                   ((_animation_frame / 3) & 1) ? -1 : 0);
+        }
+
+        if(game.rise_impact_timer() > 0)
+        {
+            return bn::fixed_point(0, (game.rise_impact_timer() & 1) ? -2 : -1);
+        }
+
         if(game.phase() == resolution_phase::clearing)
         {
             return bn::fixed_point(((_animation_frame / 2) & 1) ? 1 : -1, 0);
@@ -265,6 +282,33 @@ namespace cascade7
         {
             const int shake = ((_animation_frame + row + column) & 1) ? 2 : -2;
             return bn::fixed_point(shake, -1);
+        }
+
+        return bn::fixed_point();
+    }
+
+    bn::fixed_point renderer::_landing_effect_offset(const game& game, int row, int column) const
+    {
+        if(game.landing_timer() <= 0 || game.last_drop_row() != row || game.last_drop_column() != column)
+        {
+            return bn::fixed_point();
+        }
+
+        const int phase = 8 - game.landing_timer();
+
+        if(phase <= 1)
+        {
+            return bn::fixed_point(0, 2);
+        }
+
+        if(phase <= 3)
+        {
+            return bn::fixed_point(0, -1);
+        }
+
+        if(phase <= 5)
+        {
+            return bn::fixed_point(0, 1);
         }
 
         return bn::fixed_point();
@@ -335,7 +379,9 @@ namespace cascade7
                     const int pop_offset = clearing ? (((row + column + _animation_frame) & 1) + chain_nudge) : 0;
                     bn::fixed_point cell_position(_cell_position(row, column).x() + board_offset.x(),
                                                   _cell_position(row, column).y() + board_offset.y() - pop_offset);
-                    disc_sprite.set_position(cell_position + _blank_effect_offset(game, row, column, board_cell));
+                    disc_sprite.set_position(cell_position +
+                                             _blank_effect_offset(game, row, column, board_cell) +
+                                             _landing_effect_offset(game, row, column));
 
                     if(flashing)
                     {
@@ -358,13 +404,16 @@ namespace cascade7
                                       (flashing || clearing) ? 1 + chain_nudge : 0;
                     bn::fixed_point cell_position(_cell_position(row, column).x() + board_offset.x(),
                                                   _cell_position(row, column).y() + board_offset.y() - nudge);
-                    disc_sprite.set_position(cell_position + _blank_effect_offset(game, row, column, board_cell));
+                    disc_sprite.set_position(cell_position +
+                                             _blank_effect_offset(game, row, column, board_cell) +
+                                             _landing_effect_offset(game, row, column));
                     disc_sprite.set_visible(true);
                 }
                 else
                 {
                     disc_sprite.set_position(_cell_position(row, column) + board_offset +
-                                             _blank_effect_offset(game, row, column, board_cell));
+                                             _blank_effect_offset(game, row, column, board_cell) +
+                                             _landing_effect_offset(game, row, column));
                     disc_sprite.set_visible(true);
                 }
             }
@@ -472,11 +521,13 @@ namespace cascade7
             _draw_stat_line(28, "SCORE", game.score());
             _draw_stat_line(44, "HIGH", game.high_score());
             _draw_stat_line(60, "LEVEL", game.level());
-            _draw_stat_line(76, "RISE", game.blocks_remaining());
+            const bool rise_danger = game.blocks_remaining() <= 3;
+            const char* rise_label = rise_danger && ((_animation_frame / 10) & 1) ? "RISE!" : "RISE";
+            _draw_stat_line(76, rise_label, game.blocks_remaining());
 
             if(game.score_popup_timer() > 0)
             {
-                const int popup_y = board_top - 20 - ((scoring::popup_frames - game.score_popup_timer()) / 4);
+                const int popup_y = board_top - 20 - ((scoring::popup_frames - game.score_popup_timer()) / 6);
                 bn::string<24> popup_text;
                 popup_text += '+';
                 popup_text += bn::to_string<10>(game.score_popup_value());
@@ -489,6 +540,12 @@ namespace cascade7
                     chain_popup_text += bn::to_string<4>(game.score_popup_chain());
                     _text_generator.generate(board_left + 14, popup_y - 10, chain_popup_text, _text_sprites);
                 }
+            }
+
+            if(game.level_up_timer() > 0)
+            {
+                const int level_up_y = 92 - ((48 - game.level_up_timer()) / 8);
+                _text_generator.generate(hud_x, level_up_y, "LEVEL UP!", _text_sprites);
             }
         }
     }
