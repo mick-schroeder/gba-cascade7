@@ -22,8 +22,8 @@ namespace cascade7
         constexpr int board_left = -14;
         constexpr int board_top = -42;
         constexpr int cell_size = 16;
-        constexpr int sidebar_x = -115;
-        constexpr int sidebar_value_x = -70;
+        constexpr int sidebar_x = -105;
+        constexpr int sidebar_value_x = -65;
         constexpr int preview_y = board_top - 18;
         constexpr int rise_frames = 18;
     }
