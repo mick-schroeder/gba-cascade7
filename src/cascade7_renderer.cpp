@@ -123,6 +123,19 @@ namespace cascade7
             _game_over_window.set_show_blending(false);
             _outside_window.set_show_blending(true);
         }
+        else if(game.blank_effect_timer() > 0)
+        {
+            bn::blending::set_white_fade_color();
+
+            if(game.revealed_blank_count() > 0)
+            {
+                bn::blending::set_fade_alpha(((_animation_frame / 2) & 1) ? 0.16 : 0.08);
+            }
+            else
+            {
+                bn::blending::set_fade_alpha(((_animation_frame / 2) & 1) ? 0.1 : 0.04);
+            }
+        }
         else if(game.phase() == resolution_phase::flashing)
         {
             bn::blending::set_white_fade_color();
@@ -167,7 +180,8 @@ namespace cascade7
                 if(board_cell.occupied())
                 {
                     sprite.set_item(bn::sprite_items::cascade7_discs, _disc_graphics_index(board_cell));
-                    sprite.set_position(_cell_position(row, column) + board_offset);
+                    sprite.set_position(_cell_position(row, column) + board_offset +
+                                        _blank_effect_offset(game, row, column, board_cell));
                     sprite.set_visible(true);
                 }
                 else
@@ -230,6 +244,30 @@ namespace cascade7
     bn::fixed_point renderer::_cell_position(int row, int column)
     {
         return bn::fixed_point(board_left + 8 + (column * cell_size), board_top + 8 + (row * cell_size));
+    }
+
+    bn::fixed_point renderer::_blank_effect_offset(const game& game, int row, int column, const cell& board_cell) const
+    {
+        if(game.blank_effect_timer() <= 0)
+        {
+            return bn::fixed_point();
+        }
+
+        const int effect_index = (row * board_size) + column;
+
+        if(game.revealed_effect_mask()[effect_index] && board_cell.numbered())
+        {
+            const int pop = 2 + (((game.blank_effect_timer() + _animation_frame) / 2) & 1);
+            return bn::fixed_point(0, -pop);
+        }
+
+        if(game.cracked_effect_mask()[effect_index] && board_cell.cracked_blank())
+        {
+            const int shake = ((_animation_frame + row + column) & 1) ? 2 : -2;
+            return bn::fixed_point(shake, -1);
+        }
+
+        return bn::fixed_point();
     }
 
     int renderer::_disc_graphics_index(const cell& cell)
@@ -295,8 +333,9 @@ namespace cascade7
                 if(clear.cells[index])
                 {
                     const int pop_offset = clearing ? (((row + column + _animation_frame) & 1) + chain_nudge) : 0;
-                    disc_sprite.set_position(_cell_position(row, column).x() + board_offset.x(),
-                                             _cell_position(row, column).y() + board_offset.y() - pop_offset);
+                    bn::fixed_point cell_position(_cell_position(row, column).x() + board_offset.x(),
+                                                  _cell_position(row, column).y() + board_offset.y() - pop_offset);
+                    disc_sprite.set_position(cell_position + _blank_effect_offset(game, row, column, board_cell));
 
                     if(flashing)
                     {
@@ -317,14 +356,43 @@ namespace cascade7
                 {
                     const int nudge = (((_animation_frame / (chain_depth >= 4 ? 4 : 6)) + row + column) & 1) &&
                                       (flashing || clearing) ? 1 + chain_nudge : 0;
-                    disc_sprite.set_position(_cell_position(row, column).x() + board_offset.x(),
-                                             _cell_position(row, column).y() + board_offset.y() - nudge);
+                    bn::fixed_point cell_position(_cell_position(row, column).x() + board_offset.x(),
+                                                  _cell_position(row, column).y() + board_offset.y() - nudge);
+                    disc_sprite.set_position(cell_position + _blank_effect_offset(game, row, column, board_cell));
                     disc_sprite.set_visible(true);
                 }
                 else
                 {
-                    disc_sprite.set_position(_cell_position(row, column) + board_offset);
+                    disc_sprite.set_position(_cell_position(row, column) + board_offset +
+                                             _blank_effect_offset(game, row, column, board_cell));
                     disc_sprite.set_visible(true);
+                }
+            }
+        }
+
+        if(game.blank_effect_timer() > 0 && game.revealed_blank_count() > 0)
+        {
+            const int reveal_frame = bn::min((18 - game.blank_effect_timer()) / 3, 2);
+
+            for(int row = 0; row < board_size && explosion_index < _explosion_sprites.size(); ++row)
+            {
+                for(int column = 0; column < board_size && explosion_index < _explosion_sprites.size(); ++column)
+                {
+                    const int index = (row * board_size) + column;
+
+                    if(! game.revealed_effect_mask()[index])
+                    {
+                        continue;
+                    }
+
+                    bn::sprite_ptr& explosion_sprite = _explosion_sprites[explosion_index];
+                    const bn::fixed_point effect_position =
+                            _cell_position(row, column) + board_offset +
+                            _blank_effect_offset(game, row, column, game.board_state().at(row, column));
+                    explosion_sprite.set_position(effect_position);
+                    explosion_sprite.set_item(bn::sprite_items::cascade7_explosion, reveal_frame);
+                    explosion_sprite.set_visible(true);
+                    ++explosion_index;
                 }
             }
         }

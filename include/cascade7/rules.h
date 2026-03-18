@@ -24,6 +24,8 @@ namespace cascade7
         int cleared_numbered_cells = 0;
         int cracked_blank_cells = 0;
         int revealed_numbered_cells = 0;
+        std::array<bool, board_size * board_size> cracked_cells{};
+        std::array<bool, board_size * board_size> revealed_cells{};
     };
 
     class rules

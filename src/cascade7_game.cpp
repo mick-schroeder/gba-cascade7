@@ -51,6 +51,11 @@ namespace cascade7
             --_score_popup_timer;
         }
 
+        if(_blank_effect_timer > 0)
+        {
+            --_blank_effect_timer;
+        }
+
         // Overlay pages own input until they are dismissed.
         if(_overlay != overlay_mode::none)
         {
@@ -250,9 +255,34 @@ namespace cascade7
         return _menu_selection;
     }
 
+    int game::blank_effect_timer() const
+    {
+        return _blank_effect_timer;
+    }
+
+    int game::cracked_blank_count() const
+    {
+        return _cracked_blank_count;
+    }
+
+    int game::revealed_blank_count() const
+    {
+        return _revealed_blank_count;
+    }
+
     const clear_mask& game::pending_clear_mask() const
     {
         return _pending_clear_mask;
+    }
+
+    const std::array<bool, board_size * board_size>& game::cracked_effect_mask() const
+    {
+        return _cracked_effect_mask;
+    }
+
+    const std::array<bool, board_size * board_size>& game::revealed_effect_mask() const
+    {
+        return _revealed_effect_mask;
     }
 
     bool game::has_pending_rise_row() const
@@ -424,6 +454,11 @@ namespace cascade7
             ++_cascade_chain_count;
             _cascade_cleared_cells += clear_result.cleared_numbered_cells;
             _discs_cleared += clear_result.cleared_numbered_cells;
+            _cracked_blank_count = clear_result.cracked_blank_cells;
+            _revealed_blank_count = clear_result.revealed_numbered_cells;
+            _cracked_effect_mask = clear_result.cracked_cells;
+            _revealed_effect_mask = clear_result.revealed_cells;
+            _blank_effect_timer = (_cracked_blank_count || _revealed_blank_count) ? 18 : 0;
 
             if(clear_result.cleared_numbered_cells)
             {
@@ -437,7 +472,18 @@ namespace cascade7
 
             _phase = resolution_phase::gravity;
             _phase_timer = gravity_step_frames;
-            _set_status("FALL");
+            if(_revealed_blank_count)
+            {
+                _set_status("REVEAL!");
+            }
+            else if(_cracked_blank_count)
+            {
+                _set_status("CRACK!");
+            }
+            else
+            {
+                _set_status("FALL");
+            }
             break;
         }
 
@@ -763,6 +809,10 @@ namespace cascade7
         _last_clear_count = _cascade_cleared_cells;
         _last_chain_count = _cascade_chain_count;
         _pending_clear_mask = clear_mask{};
+        _cracked_blank_count = 0;
+        _revealed_blank_count = 0;
+        _cracked_effect_mask.fill(false);
+        _revealed_effect_mask.fill(false);
         _highest_chain = bn::max(_highest_chain, _cascade_chain_count);
 
         if(_cascade_cleared_cells)
@@ -929,12 +979,17 @@ namespace cascade7
         _menu_selection = 0;
         _cascade_cleared_cells = 0;
         _cascade_chain_count = 0;
+        _blank_effect_timer = 0;
+        _cracked_blank_count = 0;
+        _revealed_blank_count = 0;
         _cursor_repeat_frames = 0;
         _cursor_repeat_direction = 0;
         _recent_piece_count = 0;
         _recent_piece_values.fill(0);
         _recent_piece_kinds.fill(cell_kind::empty);
         _pending_clear_mask = clear_mask{};
+        _cracked_effect_mask.fill(false);
+        _revealed_effect_mask.fill(false);
         _seed_opening_board();
         _next_piece = _generate_piece();
         _set_status("READY");

@@ -159,17 +159,20 @@ namespace cascade7
             {
                 target_cell.kind = cell_kind::numbered;
                 ++result.revealed_numbered_cells;
+                result.revealed_cells[(row * board_size) + column] = true;
             }
             else
             {
                 target_cell.kind = cell_kind::cracked_blank;
                 ++result.cracked_blank_cells;
+                result.cracked_cells[(row * board_size) + column] = true;
             }
         }
         else if(target_cell.cracked_blank())
         {
             target_cell.kind = cell_kind::numbered;
             ++result.revealed_numbered_cells;
+            result.revealed_cells[(row * board_size) + column] = true;
         }
     }
 }
