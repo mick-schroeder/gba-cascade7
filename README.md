@@ -8,8 +8,7 @@ CASCADE7 is an open-source Game Boy Advance puzzle game built with Butano.
 
 ## Overview
 
-CASCADE7 is a 7x7 cascade puzzle game for Game Boy Advance.
-Discs clear when their number matches the contiguous occupied run length in a row or column. Clears can crack and reveal blank discs, gravity resolves in steps, and the bottom row rises over time to add pressure.
+CASCADE7 is a 7x7 cascade puzzle game for Game Boy Advance. Each turn, the player drops a disc into one of seven columns. Discs are numbered `1-7` or blank, and numbered discs clear when their value matches the same number of discs in their row or column. Clears also strike adjacent blanks: the first hit cracks a blank disc, and the second hit reveals it as a numbered disc. After a set number of turns, a full row rises from the bottom of the board, increasing the pressure. There is no time limit, and the goal is to survive as long as possible by creating clears, triggering cascades, and pushing for high scores. Clearing the entire board awards a `70,000` point bonus.
 
 ## Controls
 
@@ -21,10 +20,9 @@ Discs clear when their number matches the contiguous occupied run length in a ro
 ## Rules
 
 - Board size is `7x7`
-- Numbered discs clear when their value matches the occupied run length in their row or column
+- Numbered discs clear when their value matches the same number of discs in their row or column
 - Blank discs crack on the first adjacent hit and reveal into numbered discs on the next hit
-- Gravity resolves in discrete falling steps
-- The bottom row rises after a countdown that speeds up as levels increase
+- The bottom row rises after a countdown and speeds up as levels increase
 
 ## Build
 
