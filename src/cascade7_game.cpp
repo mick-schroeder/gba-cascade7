@@ -51,6 +51,12 @@ namespace cascade7
             --_score_popup_timer;
         }
 
+        if(_overlay != overlay_mode::none)
+        {
+            _handle_overlay_input();
+            return;
+        }
+
         if(_phase != resolution_phase::idle)
         {
             _update_resolution();
@@ -116,14 +122,9 @@ namespace cascade7
             _drop_piece();
         }
 
-        if(bn::keypad::select_pressed())
+        if(bn::keypad::start_pressed() || bn::keypad::select_pressed())
         {
-            _reset_new_game();
-        }
-
-        if(bn::keypad::start_pressed())
-        {
-            _reset_empty();
+            _open_pause_menu();
         }
     }
 
@@ -237,6 +238,16 @@ namespace cascade7
         return _phase_timer;
     }
 
+    overlay_mode game::overlay() const
+    {
+        return _overlay;
+    }
+
+    int game::menu_selection() const
+    {
+        return _menu_selection;
+    }
+
     const clear_mask& game::pending_clear_mask() const
     {
         return _pending_clear_mask;
@@ -255,6 +266,96 @@ namespace cascade7
     const bn::string<48>& game::status_text() const
     {
         return _status;
+    }
+
+    void game::_handle_overlay_input()
+    {
+        const int option_count = _overlay == overlay_mode::pause_menu ? 2 : 1;
+
+        if(bn::keypad::up_pressed())
+        {
+            _menu_selection = (_menu_selection + option_count - 1) % option_count;
+            return;
+        }
+
+        if(bn::keypad::down_pressed())
+        {
+            _menu_selection = (_menu_selection + 1) % option_count;
+            return;
+        }
+
+        if(_overlay == overlay_mode::pause_menu &&
+           (bn::keypad::b_pressed() || bn::keypad::start_pressed() || bn::keypad::select_pressed()))
+        {
+            _close_overlay();
+            return;
+        }
+
+        if(bn::keypad::a_pressed())
+        {
+            _confirm_overlay_selection();
+        }
+    }
+
+    void game::_open_pause_menu()
+    {
+        if(_game_over || _phase != resolution_phase::idle)
+        {
+            return;
+        }
+
+        _overlay = overlay_mode::pause_menu;
+        _menu_selection = 0;
+        _set_status("PAUSED");
+    }
+
+    void game::_open_game_over_menu()
+    {
+        _overlay = overlay_mode::game_over_menu;
+        _menu_selection = 0;
+    }
+
+    void game::_close_overlay()
+    {
+        _overlay = overlay_mode::none;
+        _menu_selection = 0;
+        _set_status("READY");
+    }
+
+    void game::_confirm_overlay_selection()
+    {
+        if(_overlay == overlay_mode::pause_menu)
+        {
+            switch(_menu_selection)
+            {
+            case 0:
+                _close_overlay();
+                break;
+
+            case 1:
+                _overlay = overlay_mode::none;
+                _menu_selection = 0;
+                _reset_new_game();
+                break;
+
+            default:
+                break;
+            }
+
+            return;
+        }
+
+        switch(_menu_selection)
+        {
+        case 0:
+            _overlay = overlay_mode::none;
+            _menu_selection = 0;
+            _reset_new_game();
+            break;
+
+        default:
+            break;
+        }
     }
 
     void game::_update_resolution()
@@ -332,6 +433,7 @@ namespace cascade7
                 _set_status("OVERFLOW");
                 _store_high_score_if_needed();
                 _play_game_over_sound();
+                _open_game_over_menu();
                 _phase = resolution_phase::idle;
                 _has_pending_rise_row = false;
                 return;
@@ -686,6 +788,7 @@ namespace cascade7
             _set_status("BOARD FULL");
             _store_high_score_if_needed();
             _play_game_over_sound();
+            _open_game_over_menu();
         }
     }
 
@@ -786,6 +889,8 @@ namespace cascade7
         _has_pending_rise_row = false;
         _phase = resolution_phase::idle;
         _phase_timer = 0;
+        _overlay = overlay_mode::none;
+        _menu_selection = 0;
         _cascade_cleared_cells = 0;
         _cascade_chain_count = 0;
         _cursor_repeat_frames = 0;

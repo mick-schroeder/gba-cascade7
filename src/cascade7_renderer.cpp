@@ -97,12 +97,24 @@ namespace cascade7
         bn::blending::set_fade_alpha(0);
         _game_over_window.set_boundaries(0, 0, 0, 0);
         _outside_window.set_show_blending(false);
+        _game_over_window.set_show_bg(_logo_bg, true);
+        _outside_window.set_show_bg(_logo_bg, true);
 
-        if(game.game_over())
+        if(game.overlay() == overlay_mode::game_over_menu)
         {
             bn::blending::set_black_fade_color();
-            bn::blending::set_fade_alpha(0.4);
-            _game_over_window.set_boundaries(-44, -116, 48, 12);
+            bn::blending::set_fade_alpha(0.45);
+            _game_over_window.set_boundaries(-50, -130, 104, -48);
+            _game_over_window.set_show_bg(_logo_bg, false);
+            _game_over_window.set_show_blending(false);
+            _outside_window.set_show_blending(true);
+        }
+        else if(game.overlay() == overlay_mode::pause_menu)
+        {
+            bn::blending::set_black_fade_color();
+            bn::blending::set_fade_alpha(0.32);
+            _game_over_window.set_boundaries(-50, -130, 104, -48);
+            _game_over_window.set_show_bg(_logo_bg, false);
             _game_over_window.set_show_blending(false);
             _outside_window.set_show_blending(true);
         }
@@ -120,7 +132,7 @@ namespace cascade7
         const int pulse_graphics_index = (_animation_frame / 12) % 2;
         const int preview_bob_offsets[] = { 0, -1, -2, -1, 0, 1, 0, -1 };
         const int preview_bob = preview_bob_offsets[(_animation_frame / 5) % 8];
-        const bool show_play_cursor = ! game.resolving() && ! game.game_over();
+        const bool show_play_cursor = ! game.resolving() && ! game.game_over() && game.overlay() == overlay_mode::none;
         const bn::fixed_point board_offset = _board_offset(game);
 
         _preview_sprite.set_x(board_left + 8 + (game.cursor_column() * cell_size) + board_offset.x());
@@ -321,10 +333,8 @@ namespace cascade7
     {
         _text_sprites.clear();
 
-        if(game.game_over())
+        if(game.overlay() == overlay_mode::game_over_menu)
         {
-            const int blink = (_animation_frame / 20) & 1;
-
             _text_generator.generate(-108, -12, "GAME OVER", _text_sprites);
 
             bn::string<24> final_score_text;
@@ -349,12 +359,20 @@ namespace cascade7
 
             bn::string<24> reason_text = game.status_text();
             _text_generator.generate(-112, 58, reason_text, _text_sprites);
-
-            if(blink == 0)
-            {
-                _text_generator.generate(-112, 74, "START RESET", _text_sprites);
-                _text_generator.generate(-112, 84, "SELECT NEW", _text_sprites);
-            }
+            _text_generator.generate(-112, 74, game.menu_selection() == 0 ? "> RESET BOARD" : "  RESET BOARD",
+                                     _text_sprites);
+            _text_generator.generate(-112, 84, game.menu_selection() == 1 ? "> NEW GAME" : "  NEW GAME",
+                                     _text_sprites);
+        }
+        else if(game.overlay() == overlay_mode::pause_menu)
+        {
+            _text_generator.generate(-108, -8, "PAUSED", _text_sprites);
+            _text_generator.generate(-112, 12, game.menu_selection() == 0 ? "> CONTINUE" : "  CONTINUE",
+                                     _text_sprites);
+            _text_generator.generate(-112, 24, game.menu_selection() == 1 ? "> NEW GAME" : "  NEW GAME",
+                                     _text_sprites);
+            _text_generator.generate(-112, 46, "A CONFIRM", _text_sprites);
+            _text_generator.generate(-112, 56, "B CANCEL", _text_sprites);
         }
         else
         {

@@ -21,6 +21,13 @@ namespace cascade7
         rising
     };
 
+    enum class overlay_mode
+    {
+        none,
+        pause_menu,
+        game_over_menu
+    };
+
     class game
     {
     public:
@@ -50,12 +57,19 @@ namespace cascade7
         [[nodiscard]] bool resolving() const;
         [[nodiscard]] resolution_phase phase() const;
         [[nodiscard]] int phase_timer() const;
+        [[nodiscard]] overlay_mode overlay() const;
+        [[nodiscard]] int menu_selection() const;
         [[nodiscard]] const clear_mask& pending_clear_mask() const;
         [[nodiscard]] bool has_pending_rise_row() const;
         [[nodiscard]] const std::array<cell, board_size>& pending_rise_row() const;
         [[nodiscard]] const bn::string<48>& status_text() const;
 
     private:
+        void _handle_overlay_input();
+        void _open_pause_menu();
+        void _open_game_over_menu();
+        void _close_overlay();
+        void _confirm_overlay_selection();
         void _update_resolution();
         [[nodiscard]] cell _generate_piece();
         [[nodiscard]] cell _generate_numbered_piece();
@@ -106,9 +120,11 @@ namespace cascade7
         int _turns_until_rise = 5;
         int _cursor_repeat_frames = 0;
         int _cursor_repeat_direction = 0;
+        int _menu_selection = 0;
         bool _game_over = false;
         bool _has_pending_rise_row = false;
         resolution_phase _phase = resolution_phase::idle;
+        overlay_mode _overlay = overlay_mode::none;
         std::array<cell, board_size> _pending_rise_row{};
         std::array<int, 4> _recent_piece_values{};
         std::array<cell_kind, 4> _recent_piece_kinds{};
