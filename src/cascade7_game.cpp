@@ -23,8 +23,8 @@ namespace cascade7
         constexpr int clear_frames = 12;
         constexpr int gravity_step_frames = 3;
         constexpr int rise_frames = 18;
-        constexpr int starting_turns_per_level = 29;
-        constexpr int minimum_turns_per_level = 5;
+        constexpr int starting_turns_per_level = 30;
+        constexpr int minimum_turns_per_level = 6;
         constexpr int initial_repeat_frames = 8;
         constexpr int held_repeat_frames = 3;
         constexpr std::array<int, max_disc_value + 1> base_value_weights = { 0, 100, 100, 110, 110, 100, 90, 110 };
@@ -38,7 +38,7 @@ namespace cascade7
 
         [[nodiscard]] constexpr int turns_for_level(int level)
         {
-            const int turns = starting_turns_per_level - (level - 1);
+            const int turns = starting_turns_per_level - ((level - 1) / 2) - bn::max(level - 6, 0);
             return turns > minimum_turns_per_level ? turns : minimum_turns_per_level;
         }
     }
@@ -790,36 +790,45 @@ namespace cascade7
             }
         }
 
-        int chance = 18 + bn::min(_level - 1, 8);
+        int chance = 14 + bn::min(_level - 1, 7);
 
-        if(_turns_until_rise <= 3)
+        if(_level <= 2)
         {
-            chance += 5;
+            chance -= 2;
         }
 
-        if(_last_clear_count == 0 && occupied_cells >= 18)
+        if(_turns_until_rise <= 2)
         {
-            chance += 3;
+            chance += 4;
+        }
+        else if(_turns_until_rise <= 4)
+        {
+            chance += 2;
         }
 
-        if(blank_cells >= 8)
+        if(_last_clear_count == 0 && occupied_cells >= 20)
         {
-            chance -= 8;
+            chance += 2;
         }
 
-        if(occupied_cells >= 30)
+        if(blank_cells >= 7)
         {
-            chance -= 6;
+            chance -= 10;
+        }
+
+        if(occupied_cells >= 32)
+        {
+            chance -= 4;
         }
 
         if(_recent_piece_count >= 2 &&
            _recent_piece_kinds[0] == cell_kind::blank &&
            _recent_piece_kinds[1] == cell_kind::blank)
         {
-            chance -= 10;
+            chance -= 12;
         }
 
-        return bn::clamp(chance, 12, 36);
+        return bn::clamp(chance, 8, 30);
     }
 
     void game::_move_cursor(int delta)
@@ -1090,7 +1099,7 @@ namespace cascade7
 
         // Retry a few times to get a random opening that has spread and no
         // immediate auto-clear before the player acts.
-        for(int attempt = 0; attempt < 32; ++attempt)
+        for(int attempt = 0; attempt < 64; ++attempt)
         {
             _board.clear();
             _recent_piece_values = starting_recent_values;
@@ -1107,8 +1116,8 @@ namespace cascade7
                 columns[swap_index] = temp;
             }
 
-            const int distinct_columns = 5 + _random.get_int(2);
-            const int blank_budget = 1 + _random.get_int(2);
+            const int distinct_columns = 6 + _random.get_int(2);
+            const int blank_budget = _level <= 2 ? _random.get_int(2) : 1 + _random.get_int(2);
             int blanks_used = 0;
             bool placement_failed = false;
 
@@ -1124,7 +1133,7 @@ namespace cascade7
                 bool prefer_low_values = seeded_disc < 4;
                 cell new_cell = _generate_numbered_piece();
 
-                if(blanks_used < blank_budget && _random.get_int(100) < 25)
+                if(blanks_used < blank_budget && _random.get_int(100) < (_level <= 2 ? 14 : 22))
                 {
                     new_cell = cell{cell_kind::blank, _generate_value(false, prefer_low_values)};
                     _remember_generated_piece(new_cell);
@@ -1146,24 +1155,72 @@ namespace cascade7
             }
 
             int occupied_columns = 0;
+            int max_column_height = 0;
+            int distinct_values = 0;
+            int promising_cells = 0;
+            std::array<bool, max_disc_value + 1> seen_values = {};
 
             for(int column = 0; column < board_size; ++column)
             {
                 bool column_occupied = false;
+                int column_height = 0;
 
                 for(int row = 0; row < board_size; ++row)
                 {
-                    if(_board.at(row, column).occupied())
+                    const cell& board_cell = _board.at(row, column);
+
+                    if(board_cell.occupied())
                     {
                         column_occupied = true;
-                        break;
+                        ++column_height;
+
+                        if(board_cell.numbered())
+                        {
+                            seen_values[board_cell.value] = true;
+
+                            int horizontal_span = 1;
+
+                            for(int left = column - 1; left >= 0 && _board.at(row, left).occupied(); --left)
+                            {
+                                ++horizontal_span;
+                            }
+
+                            for(int right = column + 1; right < board_size && _board.at(row, right).occupied(); ++right)
+                            {
+                                ++horizontal_span;
+                            }
+
+                            int vertical_span = 1;
+
+                            for(int up = row - 1; up >= 0 && _board.at(up, column).occupied(); --up)
+                            {
+                                ++vertical_span;
+                            }
+
+                            for(int down = row + 1; down < board_size && _board.at(down, column).occupied(); ++down)
+                            {
+                                ++vertical_span;
+                            }
+
+                            if(board_cell.value == horizontal_span - 1 || board_cell.value == horizontal_span + 1 ||
+                               board_cell.value == vertical_span - 1 || board_cell.value == vertical_span + 1)
+                            {
+                                ++promising_cells;
+                            }
+                        }
                     }
                 }
 
                 occupied_columns += column_occupied;
+                max_column_height = bn::max(max_column_height, column_height);
             }
 
-            if(occupied_columns >= 5)
+            for(int value = min_disc_value; value <= max_disc_value; ++value)
+            {
+                distinct_values += seen_values[value];
+            }
+
+            if(occupied_columns >= 6 && max_column_height <= 2 && distinct_values >= 4 && promising_cells >= 2)
             {
                 return;
             }
@@ -1192,7 +1249,8 @@ namespace cascade7
             { 3, 1, 1, 1, 1, 0, 0 }
         };
 
-        const int pattern_index = _random.get_int(4);
+        const int max_pattern_index = _level <= 3 ? 3 : 4;
+        const int pattern_index = _random.get_int(max_pattern_index);
         const int distinct_values = count_patterns[pattern_index][4] ? 5 : 4;
         std::array<bool, max_disc_value + 1> used_values = {};
         std::array<int, board_size> row_values = {};
@@ -1200,8 +1258,9 @@ namespace cascade7
 
         for(int value_index = 0; value_index < distinct_values; ++value_index)
         {
-            const bool prefer_high_values = _level >= 5;
-            const int value = _generate_value(prefer_high_values, ! prefer_high_values, true, used_values);
+            const bool prefer_high_values = _level >= 6;
+            const bool prefer_low_values = _level <= 3;
+            const int value = _generate_value(prefer_high_values, prefer_low_values, true, used_values);
             used_values[value] = true;
 
             for(int repeat = 0; repeat < count_patterns[pattern_index][value_index]; ++repeat)

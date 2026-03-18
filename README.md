@@ -1,16 +1,30 @@
 # CASCADE7
 
-CASCADE7 is an open-source Game Boy Advance puzzle game.
+CASCADE7 is an open-source Game Boy Advance puzzle game built with Butano.
 
 ![CASCADE7 Logo](CASCADE7-LOGO.png)
 
 ![CASCADE7 Screenshot](CASCADE7-SCREENSHOT.png)
 
+## Overview
+
+CASCADE7 is a 7x7 cascade puzzle game for Game Boy Advance.
+Discs clear when their number matches the contiguous occupied run length in a row or column. Clears can crack and reveal blank discs, gravity resolves in steps, and the bottom row rises over time to add pressure.
+
 ## Controls
 
 - `LEFT/RIGHT`: move the drop cursor
 - `A`: drop the next disc
-- `START`: options
+- `L/R`: snap to board edges
+- `START` or `SELECT`: pause / help / about / new game
+
+## Rules
+
+- Board size is `7x7`
+- Numbered discs clear when their value matches the occupied run length in their row or column
+- Blank discs crack on the first adjacent hit and reveal into numbered discs on the next hit
+- Gravity resolves in discrete falling steps
+- The bottom row rises after a countdown that speeds up as levels increase
 
 ## Build
 
@@ -22,4 +36,29 @@ cd gba-cascade7
 make
 ```
 
-This project is intended for the standard Butano + `devkitARM` setup.
+This project targets a standard Butano + `devkitARM` setup.
+
+The build produces `CASCADE7.gba`.
+
+## Asset Workflow
+
+- `graphics/`: sprite sheets and background graphics
+- `audio/`: sound effect
+
+## Project Layout
+
+- [`include/cascade7/game.h`](include/cascade7/game.h): game state and flow
+- [`include/cascade7/rules.h`](include/cascade7/rules.h): match and clear rules
+- [`include/cascade7/scoring.h`](include/cascade7/scoring.h): score tuning
+- [`src/cascade7_game.cpp`](src/cascade7_game.cpp): runtime logic, RNG, progression, input
+- [`src/cascade7_rules.cpp`](src/cascade7_rules.cpp): clear and reveal resolution
+- [`src/cascade7_renderer.cpp`](src/cascade7_renderer.cpp): board, HUD, feedback, menus
+
+## Credits
+
+- [Mick Schroeder](https://www.mickschroeder.com)
+- [Engine framework: Butano](https://github.com/GValiente/butano)
+
+## License
+
+Released under the [MIT License](LICENSE).

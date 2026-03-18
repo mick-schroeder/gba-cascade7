@@ -3,6 +3,7 @@
 
 #include "bn_fixed_point.h"
 #include "bn_rect_window.h"
+#include "bn_camera_ptr.h"
 #include "bn_regular_bg_ptr.h"
 #include "bn_sprite_ptr.h"
 #include "bn_sprite_text_generator.h"
@@ -23,6 +24,7 @@ namespace cascade7
 
     private:
         [[nodiscard]] static bn::fixed_point _cell_position(int row, int column);
+        [[nodiscard]] bn::fixed_point _camera_offset(const game& game) const;
         [[nodiscard]] bn::fixed_point _board_offset(const game& game) const;
         [[nodiscard]] bn::fixed_point _blank_effect_offset(const game& game, int row, int column,
                                                            const cell& board_cell) const;
@@ -32,6 +34,7 @@ namespace cascade7
         void _draw_hud_text(const game& game);
         void _draw_stat_line(int y, const char* label, int value);
 
+        bn::camera_ptr _camera;
         bn::regular_bg_ptr _logo_bg;
         bn::sprite_ptr _preview_sprite;
         bn::rect_window _game_over_window;

@@ -30,6 +30,7 @@ namespace cascade7
     }
 
     renderer::renderer() :
+        _camera(bn::camera_ptr::create(0, 0)),
         _logo_bg(bn::regular_bg_items::cascade7_logo.create_bg(8, 48)),
         _preview_sprite(bn::sprite_items::cascade7_discs.create_sprite(0, preview_y, 0)),
         _game_over_window(bn::rect_window::internal()),
@@ -39,6 +40,7 @@ namespace cascade7
         _text_generator.set_left_alignment();
         bn::bg_palettes::set_transparent_color(bn::color(0, 0, 0));
         _logo_bg.set_priority(3);
+        _logo_bg.set_camera(_camera);
         _game_over_window.set_boundaries(0, 0, 0, 0);
         _game_over_window.set_show_blending(false);
         _outside_window.set_show_blending(false);
@@ -52,13 +54,16 @@ namespace cascade7
 
         for(int index = 0; index < 4; ++index)
         {
-            _grid_sprites.push_back(bn::sprite_items::cascade7_grid.create_sprite(grid_positions[index], index));
+            bn::sprite_ptr sprite = bn::sprite_items::cascade7_grid.create_sprite(grid_positions[index], index);
+            sprite.set_camera(_camera);
+            _grid_sprites.push_back(sprite);
         }
 
         for(int row = 0; row < board_size; ++row)
         {
             bn::sprite_ptr sprite = bn::sprite_items::cascade7_column_highlight.create_sprite(_cell_position(row, 0), 0);
             sprite.set_z_order(1);
+            sprite.set_camera(_camera);
             _column_highlight_sprites.push_back(sprite);
         }
 
@@ -68,6 +73,7 @@ namespace cascade7
             {
                 bn::sprite_ptr sprite = bn::sprite_items::cascade7_discs.create_sprite(_cell_position(row, column), 0);
                 sprite.set_z_order(0);
+                sprite.set_camera(_camera);
                 sprite.set_visible(false);
                 _disc_sprites.push_back(sprite);
             }
@@ -77,6 +83,7 @@ namespace cascade7
         {
             bn::sprite_ptr sprite = bn::sprite_items::cascade7_discs.create_sprite(_cell_position(board_size, column), 0);
             sprite.set_z_order(0);
+            sprite.set_camera(_camera);
             sprite.set_visible(false);
             _rise_sprites.push_back(sprite);
         }
@@ -85,15 +92,18 @@ namespace cascade7
         {
             bn::sprite_ptr explosion = bn::sprite_items::cascade7_explosion.create_sprite(0, 0, 0);
             explosion.set_z_order(-2);
+            explosion.set_camera(_camera);
             explosion.set_visible(false);
             _explosion_sprites.push_back(explosion);
         }
 
+        _preview_sprite.set_camera(_camera);
     }
 
     void renderer::draw(const game& game)
     {
         ++_animation_frame;
+        _camera.set_position(_camera_offset(game));
 
         bn::blending::set_fade_alpha(0);
         _game_over_window.set_boundaries(0, 0, 0, 0);
@@ -225,6 +235,27 @@ namespace cascade7
         }
 
         _draw_hud_text(game);
+    }
+
+    bn::fixed_point renderer::_camera_offset(const game& game) const
+    {
+        if(game.all_clear_timer() > 0)
+        {
+            return bn::fixed_point(((_animation_frame / 2) & 1) ? 1 : -1,
+                                   ((_animation_frame / 3) & 1) ? 1 : -1);
+        }
+
+        if(game.rise_impact_timer() > 0)
+        {
+            return bn::fixed_point(((_animation_frame / 2) & 1) ? 1 : -1, 0);
+        }
+
+        if(game.score_popup_timer() > 0 && game.score_popup_chain() >= scoring::large_chain_threshold)
+        {
+            return bn::fixed_point(((_animation_frame / 3) & 1) ? 1 : -1, 0);
+        }
+
+        return bn::fixed_point();
     }
 
     bn::fixed_point renderer::_board_offset(const game& game) const
