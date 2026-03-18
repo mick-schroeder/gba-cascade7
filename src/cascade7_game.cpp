@@ -29,6 +29,12 @@ namespace cascade7
         constexpr int held_repeat_frames = 3;
         constexpr std::array<int, max_disc_value + 1> base_value_weights = { 0, 100, 100, 110, 110, 100, 90, 110 };
         constexpr const char save_format_tag[] = "C7SAVE1";
+        constexpr int clear_sound_priority = 0;
+        constexpr int crack_sound_priority = 1;
+        constexpr int reveal_sound_priority = 2;
+        constexpr int chain_sound_priority = 3;
+        constexpr int rise_sound_priority = 4;
+        constexpr int game_over_sound_priority = 5;
 
         [[nodiscard]] constexpr int turns_for_level(int level)
         {
@@ -1238,33 +1244,33 @@ namespace cascade7
     void game::_play_clear_sound(int cleared_numbered_cells) const
     {
         const bn::fixed volume = cleared_numbered_cells >= 4 ? bn::fixed(0.9) : bn::fixed(0.7);
-        bn::sound_items::cascade7_clear.play(volume);
+        bn::sound_items::cascade7_clear.play_with_priority(clear_sound_priority, volume);
     }
 
     void game::_play_crack_sound(int cracked_blank_cells) const
     {
         const bn::fixed volume = cracked_blank_cells >= 2 ? bn::fixed(0.78) : bn::fixed(0.66);
-        bn::sound_items::cascade7_crack.play(volume);
+        bn::sound_items::cascade7_crack.play_with_priority(crack_sound_priority, volume);
     }
 
     void game::_play_reveal_sound(int revealed_numbered_cells) const
     {
         const bn::fixed volume = revealed_numbered_cells >= 2 ? bn::fixed(0.95) : bn::fixed(0.82);
-        bn::sound_items::cascade7_reveal.play(volume);
+        bn::sound_items::cascade7_reveal.play_with_priority(reveal_sound_priority, volume);
     }
 
     void game::_play_chain_sound() const
     {
-        bn::sound_items::cascade7_chain.play(0.85);
+        bn::sound_items::cascade7_chain.play_with_priority(chain_sound_priority, 0.85);
     }
 
     void game::_play_rise_sound() const
     {
-        bn::sound_items::cascade7_rise.play(0.8);
+        bn::sound_items::cascade7_rise.play_with_priority(rise_sound_priority, 0.8);
     }
 
     void game::_play_game_over_sound() const
     {
-        bn::sound_items::cascade7_game_over.play(0.9);
+        bn::sound_items::cascade7_game_over.play_with_priority(game_over_sound_priority, 0.9);
     }
 }

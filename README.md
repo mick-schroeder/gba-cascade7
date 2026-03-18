@@ -9,7 +9,7 @@ CASCADE7 is an open-source Game Boy Advance puzzle game.
 ## Controls
 
 - `LEFT/RIGHT`: move the drop cursor
-- `A`: drop the next piece
+- `A`: drop the next disc
 - `START`: options
 
 ## Build
