@@ -53,7 +53,7 @@ cd gba-cascade7
 make
 ```
 
-This project targets a standard Butano + `devkitARM` setup.
+This project targets a standard Butano + `devkitARM` setup. See [Butano - Getting Started](https://gvaliente.github.io/butano/getting_started.html) for instructions on your platform.
 
 The build produces `CASCADE7.gba`.
 
