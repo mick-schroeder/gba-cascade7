@@ -124,7 +124,8 @@ namespace cascade7
         }
         else if(game.overlay() == overlay_mode::pause_menu ||
                 game.overlay() == overlay_mode::help_screen ||
-                game.overlay() == overlay_mode::about_screen)
+                game.overlay() == overlay_mode::about_screen ||
+            game.overlay() == overlay_mode::mode_select)
         {
             bn::blending::set_black_fade_color();
             bn::blending::set_fade_alpha(0.32);
@@ -491,33 +492,37 @@ namespace cascade7
         if(game.overlay() == overlay_mode::game_over_menu)
         {
             _text_generator.generate(sidebar_x, -12, "*GAME OVER*", _text_sprites);
+            _text_generator.generate(sidebar_x, -2, game.mode() == game_mode::fast ? "FAST MODE" : "STANDARD MODE",
+                                     _text_sprites);
 
             bn::string<24> final_score_text;
             final_score_text += "SCORE ";
             final_score_text += bn::to_string<10>(game.score());
-            _text_generator.generate(sidebar_x, 8, final_score_text, _text_sprites);
+            _text_generator.generate(sidebar_x, 18, final_score_text, _text_sprites);
 
             bn::string<24> high_score_text;
             high_score_text += "HIGH ";
             high_score_text += bn::to_string<10>(game.high_score());
-            _text_generator.generate(sidebar_x, 20, high_score_text, _text_sprites);
+            _text_generator.generate(sidebar_x, 30, high_score_text, _text_sprites);
 
             bn::string<24> final_level_text;
             final_level_text += "LEVEL ";
             final_level_text += bn::to_string<4>(game.level());
-            _text_generator.generate(sidebar_x, 32, final_level_text, _text_sprites);
+            _text_generator.generate(sidebar_x, 42, final_level_text, _text_sprites);
 
             bn::string<24> best_chain_text;
             best_chain_text += "BEST ";
             best_chain_text += bn::to_string<4>(game.highest_chain());
-            _text_generator.generate(sidebar_x, 44, best_chain_text, _text_sprites);
+            _text_generator.generate(sidebar_x, 54, best_chain_text, _text_sprites);
 
-            _text_generator.generate(sidebar_x, 64, game.menu_selection() == 0 ? "> NEW GAME" : "  NEW GAME",
+            _text_generator.generate(sidebar_x, 76, game.menu_selection() == 0 ? "> NEW GAME" : "  NEW GAME",
                                      _text_sprites);
         }
         else if(game.overlay() == overlay_mode::pause_menu)
         {
-            _text_generator.generate(-108, -16, "PAUSED", _text_sprites);
+            _text_generator.generate(-108, -34, "PAUSED", _text_sprites);
+            _text_generator.generate(sidebar_x, -14, game.mode() == game_mode::fast ? "FAST MODE" : "STANDARD MODE",
+                                     _text_sprites);
             _text_generator.generate(sidebar_x, 4, game.menu_selection() == 0 ? "> CONTINUE" : "  CONTINUE",
                                      _text_sprites);
             _text_generator.generate(sidebar_x, 16, game.menu_selection() == 1 ? "> HELP" : "  HELP",
@@ -529,14 +534,29 @@ namespace cascade7
             _text_generator.generate(sidebar_x, 62, "A CONFIRM", _text_sprites);
             _text_generator.generate(sidebar_x, 72, "B CANCEL", _text_sprites);
         }
+        else if(game.overlay() == overlay_mode::mode_select)
+        {
+            _text_generator.generate(sidebar_x, -34, "NEW GAME", _text_sprites);
+            _text_generator.generate(sidebar_x, -20, "SELECT MODE", _text_sprites);
+            _text_generator.generate(sidebar_x, 1, game.menu_selection() == 0 ? "> STANDARD" : "  STANDARD",
+                                     _text_sprites);
+            _text_generator.generate(sidebar_x, 14, "RANDOM + BLANKS", _text_sprites);
+            _text_generator.generate(sidebar_x, 32, game.menu_selection() == 1 ? "> FAST MODE" : "  FAST MODE",
+                                     _text_sprites);
+            _text_generator.generate(sidebar_x, 44, "NUMBERS ONLY / 5 RISE", _text_sprites);
+            _text_generator.generate(sidebar_x, 64, "A CONFIRM", _text_sprites);
+            _text_generator.generate(sidebar_x, 74, "B BACK", _text_sprites);
+        }
         else if(game.overlay() == overlay_mode::help_screen)
         {
             _text_generator.generate(sidebar_x, -18, "HELP", _text_sprites);
             _text_generator.generate(sidebar_x, -2, "A DROP DISC", _text_sprites);
             _text_generator.generate(sidebar_x, 10, "LEFT/RIGHT MOVE", _text_sprites);
             _text_generator.generate(sidebar_x, 22, "MATCH DISC # TO", _text_sprites);
-             _text_generator.generate(sidebar_x, 34, "# OF DISCS IN ROW OR COLUMN", _text_sprites);
-            _text_generator.generate(sidebar_x, 60, "B BACK", _text_sprites);
+            _text_generator.generate(sidebar_x, 34, "# OF DISCS IN ROW OR COLUMN", _text_sprites);
+            _text_generator.generate(sidebar_x, 48, "STANDARD: BLANKS CAN DROP", _text_sprites);
+            _text_generator.generate(sidebar_x, 60, "FAST: 5 DROPS PER LEVEL", _text_sprites);
+            _text_generator.generate(sidebar_x, 82, "B BACK", _text_sprites);
         }
         else if(game.overlay() == overlay_mode::about_screen)
         {
@@ -547,8 +567,12 @@ namespace cascade7
         }
         else
         {
-            _text_generator.generate(sidebar_x, -35, "BY MICK", _text_sprites);
-            _text_generator.generate(sidebar_x, -25, "SCHROEDER", _text_sprites);
+            _text_generator.generate(sidebar_x, -42, "BY MICK", _text_sprites);
+            _text_generator.generate(sidebar_x, -32, "SCHROEDER", _text_sprites);
+            const bn::string_view header_text = game.status_timer() > 0 ? bn::string_view(game.status_text()) :
+                                                (game.mode() == game_mode::fast ? bn::string_view("FAST MODE") :
+                                                                                  bn::string_view(""));
+            _text_generator.generate(sidebar_x, -15, header_text, _text_sprites);
             _draw_stat_block(0, "SCORE", game.score());
             _draw_stat_block(24, "HIGH", game.high_score());
             _draw_stat_line(48, "LEVEL", game.level());

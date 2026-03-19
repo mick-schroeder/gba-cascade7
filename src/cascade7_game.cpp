@@ -15,7 +15,8 @@ namespace cascade7
         struct save_data
         {
             char format_tag[8] = {};
-            int high_score = 0;
+            int standard_high_score = 0;
+            int fast_high_score = 0;
         };
 
         constexpr int settle_frames = 6;
@@ -28,16 +29,27 @@ namespace cascade7
         constexpr int initial_repeat_frames = 8;
         constexpr int held_repeat_frames = 3;
         constexpr std::array<int, max_disc_value + 1> base_value_weights = { 0, 102, 94, 96, 110, 92, 80, 112 };
-        constexpr const char save_format_tag[] = "C7SAVE1";
+        constexpr const char save_format_tag[] = "C7SAVE2";
         constexpr int clear_sound_priority = 0;
         constexpr int crack_sound_priority = 1;
         constexpr int reveal_sound_priority = 2;
         constexpr int chain_sound_priority = 3;
         constexpr int rise_sound_priority = 4;
         constexpr int game_over_sound_priority = 5;
+        constexpr int status_frames = 48;
 
-        [[nodiscard]] constexpr int turns_for_level(int level)
+        [[nodiscard]] constexpr int mode_index(game_mode mode)
         {
+            return mode == game_mode::fast ? 1 : 0;
+        }
+
+        [[nodiscard]] constexpr int turns_for_level(game_mode mode, int level)
+        {
+            if(mode == game_mode::fast)
+            {
+                return 5;
+            }
+
             // The extracted Drop7 sequence declines by one turn per level until it
             // hits a short late-game floor. Keep the same pacing shape, but keep
             // actual piece values random.
@@ -47,7 +59,7 @@ namespace cascade7
     }
 
     game::game() :
-        _next_piece(_generate_piece())
+        _next_piece(cell{cell_kind::numbered, 1})
     {
         _load_save();
         _reset_new_game();
@@ -83,6 +95,11 @@ namespace cascade7
         if(_level_up_timer > 0)
         {
             --_level_up_timer;
+        }
+
+        if(_status_timer > 0)
+        {
+            --_status_timer;
         }
 
         // Overlay pages own input until they are dismissed.
@@ -196,7 +213,12 @@ namespace cascade7
 
     int game::high_score() const
     {
-        return _high_score;
+        return _high_scores[mode_index(_mode)];
+    }
+
+    game_mode game::mode() const
+    {
+        return _mode;
     }
 
     int game::current_chain_depth() const
@@ -329,6 +351,11 @@ namespace cascade7
         return _level_up_timer;
     }
 
+    int game::status_timer() const
+    {
+        return _status_timer;
+    }
+
     const clear_mask& game::pending_clear_mask() const
     {
         return _pending_clear_mask;
@@ -367,6 +394,10 @@ namespace cascade7
         {
             option_count = 4;
         }
+        else if(_overlay == overlay_mode::mode_select)
+        {
+            option_count = 2;
+        }
 
         if(bn::keypad::up_pressed())
         {
@@ -381,6 +412,7 @@ namespace cascade7
         }
 
         if((_overlay == overlay_mode::pause_menu ||
+            _overlay == overlay_mode::mode_select ||
             _overlay == overlay_mode::help_screen ||
             _overlay == overlay_mode::about_screen) &&
            (bn::keypad::b_pressed() || bn::keypad::start_pressed() || bn::keypad::select_pressed()))
@@ -413,11 +445,28 @@ namespace cascade7
         _menu_selection = 0;
     }
 
+    void game::_open_mode_select(overlay_mode return_overlay)
+    {
+        _mode_select_return_overlay = return_overlay;
+        _overlay = overlay_mode::mode_select;
+        _menu_selection = mode_index(_mode);
+        _set_status("SELECT MODE");
+    }
+
     void game::_close_overlay()
     {
-        _overlay = overlay_mode::none;
+        if(_overlay == overlay_mode::mode_select)
+        {
+            _overlay = _mode_select_return_overlay;
+        }
+        else
+        {
+            _overlay = overlay_mode::none;
+        }
+
         _menu_selection = 0;
-        _set_status("READY");
+        _set_status(_overlay == overlay_mode::pause_menu ? "PAUSED" :
+                    (_overlay == overlay_mode::game_over_menu ? "GAME OVER" : "READY"));
     }
 
     void game::_confirm_overlay_selection()
@@ -442,15 +491,23 @@ namespace cascade7
                 break;
 
             case 3:
-                _overlay = overlay_mode::none;
-                _menu_selection = 0;
-                _reset_new_game();
+                _open_mode_select(overlay_mode::pause_menu);
                 break;
 
             default:
                 break;
             }
 
+            return;
+        }
+
+        if(_overlay == overlay_mode::mode_select)
+        {
+            const game_mode selected_mode = _menu_selection == 1 ? game_mode::fast : game_mode::standard;
+            _overlay = overlay_mode::none;
+            _menu_selection = 0;
+            _mode = selected_mode;
+            _reset_new_game();
             return;
         }
 
@@ -465,9 +522,7 @@ namespace cascade7
         switch(_menu_selection)
         {
         case 0:
-            _overlay = overlay_mode::none;
-            _menu_selection = 0;
-            _reset_new_game();
+            _open_mode_select(overlay_mode::game_over_menu);
             break;
 
         default:
@@ -598,6 +653,11 @@ namespace cascade7
 
     cell game::_generate_piece()
     {
+        if(_mode == game_mode::fast)
+        {
+            return _generate_numbered_piece();
+        }
+
         const int value = _generate_value();
         const int blank_roll = _random.get_int(100);
 
@@ -832,16 +892,10 @@ namespace cascade7
 
         if(_cascade_cleared_cells)
         {
-            _set_status(_cascade_chain_count > 1 ? "COMBO!" : "CASCADE!");
-
             if(_cascade_chain_count >= scoring::large_chain_threshold)
             {
                 _play_chain_sound();
             }
-        }
-        else
-        {
-            _set_status("PLACED");
         }
 
         if(_board.empty())
@@ -849,7 +903,26 @@ namespace cascade7
             _score += scoring::full_clear_bonus;
             _last_move_score += scoring::full_clear_bonus;
             _all_clear_timer = 24;
-            _set_status("ALL CLEAR!");
+        }
+
+        if(_last_move_score > 0)
+        {
+            if(_board.empty())
+            {
+                _set_score_status("ALL CLEAR", _last_move_score);
+            }
+            else if(_last_chain_count > 1)
+            {
+                _set_score_status("COMBO", _last_move_score);
+            }
+            else
+            {
+                _set_score_status("", _last_move_score);
+            }
+        }
+        else
+        {
+            _set_status("PLACED");
         }
 
         if(_last_move_score >= scoring::large_popup_score_threshold ||
@@ -863,7 +936,7 @@ namespace cascade7
         if(_turns_until_rise <= 0)
         {
             _raise_blank_row();
-            _turns_until_rise = turns_for_level(_level);
+            _turns_until_rise = turns_for_level(_mode, _level);
             _blocks_remaining = _turns_until_rise;
             return;
         }
@@ -896,6 +969,22 @@ namespace cascade7
     void game::_set_status(const char* text)
     {
         _status = text;
+        _status_timer = status_frames;
+    }
+
+    void game::_set_score_status(const char* prefix, int score)
+    {
+        _status.clear();
+
+        if(prefix[0])
+        {
+            _status += prefix;
+            _status += ' ';
+        }
+
+        _status += '+';
+        _status += bn::to_string<10>(score);
+        _status_timer = status_frames;
     }
 
     void game::_load_save()
@@ -916,11 +1005,13 @@ namespace cascade7
 
         if(valid)
         {
-            _high_score = stored_data.high_score;
+            _high_scores[0] = stored_data.standard_high_score;
+            _high_scores[1] = stored_data.fast_high_score;
             return;
         }
 
-        _high_score = 0;
+        _high_scores[0] = 0;
+        _high_scores[1] = 0;
 
         save_data new_data;
 
@@ -930,18 +1021,21 @@ namespace cascade7
             new_data.format_tag[index] = save_format_tag[index];
         }
 
-        new_data.high_score = 0;
+        new_data.standard_high_score = 0;
+        new_data.fast_high_score = 0;
         bn::sram::write(new_data);
     }
 
     void game::_store_high_score_if_needed()
     {
-        if(_score <= _high_score)
+        const int current_mode_index = mode_index(_mode);
+
+        if(_score <= _high_scores[current_mode_index])
         {
             return;
         }
 
-        _high_score = _score;
+        _high_scores[current_mode_index] = _score;
 
         save_data stored_data;
 
@@ -950,7 +1044,8 @@ namespace cascade7
             stored_data.format_tag[index] = save_format_tag[index];
         }
 
-        stored_data.high_score = _high_score;
+        stored_data.standard_high_score = _high_scores[0];
+        stored_data.fast_high_score = _high_scores[1];
         bn::sram::write(stored_data);
     }
 
@@ -964,10 +1059,10 @@ namespace cascade7
         _rise_impact_timer = 16;
         _level_up_timer = 48;
         ++_level;
-        _max_blocks = turns_for_level(_level);
+        _max_blocks = turns_for_level(_mode, _level);
         _score += scoring::rise_bonus;
         _last_move_score += scoring::rise_bonus;
-        _set_status("ROW RISE");
+        _set_score_status("LEVEL UP", scoring::rise_bonus);
         _play_rise_sound();
     }
 
@@ -986,7 +1081,7 @@ namespace cascade7
         _score_popup_timer = 0;
         _last_clear_count = 0;
         _last_chain_count = 0;
-        _max_blocks = turns_for_level(_level);
+        _max_blocks = turns_for_level(_mode, _level);
         _turns_until_rise = _max_blocks;
         _blocks_remaining = _turns_until_rise;
         _game_over = false;
@@ -1006,6 +1101,7 @@ namespace cascade7
         _all_clear_timer = 0;
         _rise_impact_timer = 0;
         _level_up_timer = 0;
+        _status_timer = 0;
         _cursor_repeat_frames = 0;
         _cursor_repeat_direction = 0;
         _recent_piece_count = 0;
@@ -1051,7 +1147,7 @@ namespace cascade7
             }
 
             const int distinct_columns = 6 + _random.get_int(2);
-            const int blank_budget = _level <= 2 ? 1 : 1 + _random.get_int(2);
+            const int blank_budget = _mode == game_mode::fast ? 0 : (_level <= 2 ? 1 : 1 + _random.get_int(2));
             int blanks_used = 0;
             bool placement_failed = false;
 
