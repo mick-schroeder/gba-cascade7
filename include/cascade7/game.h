@@ -107,6 +107,7 @@ namespace cascade7
         void _raise_blank_row();
         void _set_status(const char* text);
         void _set_score_status(const char* prefix, int score);
+        void _set_combo_score_status(int chain_count, int score);
         void _load_save();
         void _store_save() const;
         void _store_high_score_if_needed();

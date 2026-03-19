@@ -105,6 +105,18 @@ namespace cascade7
             const int turns = starting_turns_per_level - level + 1;
             return turns > minimum_turns_per_level ? turns : minimum_turns_per_level;
         }
+
+        [[nodiscard]] constexpr resolution_phase sanitize_phase(int saved_phase)
+        {
+            return saved_phase >= int(resolution_phase::idle) && saved_phase <= int(resolution_phase::rising) ?
+                        resolution_phase(saved_phase) : resolution_phase::idle;
+        }
+
+        [[nodiscard]] constexpr overlay_mode sanitize_overlay(int saved_overlay)
+        {
+            return saved_overlay >= int(overlay_mode::none) && saved_overlay <= int(overlay_mode::about_screen) ?
+                        overlay_mode(saved_overlay) : overlay_mode::none;
+        }
     }
 
     game::game() :
@@ -485,6 +497,7 @@ namespace cascade7
         _overlay = overlay_mode::pause_menu;
         _menu_selection = 0;
         _set_status("PAUSED");
+        _store_save();
     }
 
     void game::_open_game_over_menu()
@@ -500,6 +513,7 @@ namespace cascade7
         _overlay = overlay_mode::mode_select;
         _menu_selection = mode_index(_mode);
         _set_status("SELECT MODE");
+        _store_save();
     }
 
     void game::_close_overlay()
@@ -516,6 +530,7 @@ namespace cascade7
         _menu_selection = 0;
         _set_status(_overlay == overlay_mode::pause_menu ? "PAUSED" :
                     (_overlay == overlay_mode::game_over_menu ? "GAME OVER" : "READY"));
+        _store_save();
     }
 
     void game::_confirm_overlay_selection()
@@ -924,6 +939,7 @@ namespace cascade7
 
         // The preview is always rolled immediately after a successful drop.
         _next_piece = _generate_piece();
+        _store_save();
     }
 
     void game::_finish_resolution_step()
@@ -960,14 +976,11 @@ namespace cascade7
             {
                 _set_score_status("ALL CLEAR", _last_move_score);
             }
-            else if(_last_chain_count > 1)
-            {
-                _set_score_status("COMBO", _last_move_score);
-            }
             else
             {
-                _set_score_status("", _last_move_score);
+                _set_combo_score_status(_last_chain_count, _last_move_score);
             }
+       
         }
         else
         {
@@ -1013,13 +1026,16 @@ namespace cascade7
             _play_game_over_sound();
             _open_game_over_menu();
         }
+        else
+        {
+            _store_save();
+        }
     }
 
     void game::_set_status(const char* text)
     {
         _status = text;
         _status_timer = status_frames;
-        _store_save();
     }
 
     void game::_set_score_status(const char* prefix, int score)
@@ -1035,6 +1051,18 @@ namespace cascade7
         _status += '+';
         _status += bn::to_string<10>(score);
         _status_timer = status_frames;
+        _store_save();
+    }
+
+    void game::_set_combo_score_status(int chain_count, int score)
+    {
+        _status.clear();
+        _status += "";
+        _status += bn::to_string<4>(chain_count);
+        _status += "x +";
+        _status += bn::to_string<10>(score);
+        _status_timer = status_frames;
+        _store_save();
     }
 
     void game::_load_save()
@@ -1104,9 +1132,9 @@ namespace cascade7
                 _status_timer = stored_data.status_timer;
                 _game_over = stored_data.game_over;
                 _has_pending_rise_row = stored_data.has_pending_rise_row;
-                _phase = resolution_phase(stored_data.phase);
-                _overlay = overlay_mode(stored_data.overlay);
-                _mode_select_return_overlay = overlay_mode(stored_data.mode_select_return_overlay);
+                _phase = sanitize_phase(stored_data.phase);
+                _overlay = sanitize_overlay(stored_data.overlay);
+                _mode_select_return_overlay = sanitize_overlay(stored_data.mode_select_return_overlay);
                 _pending_rise_row = stored_data.pending_rise_row;
                 _cracked_effect_mask = stored_data.cracked_effect_mask;
                 _revealed_effect_mask = stored_data.revealed_effect_mask;
@@ -1304,6 +1332,7 @@ namespace cascade7
         _seed_opening_board();
         _next_piece = _generate_piece();
         _set_status("READY");
+        _store_save();
     }
 
     void game::_reset_new_game()
@@ -1511,11 +1540,20 @@ namespace cascade7
         _recent_piece_values = starting_recent_values;
         _recent_piece_kinds = starting_recent_kinds;
         _recent_piece_count = starting_recent_count;
+        std::array<int, board_size> column_heights = {};
 
         for(int seeded_disc = 0; seeded_disc < seeded_disc_count; ++seeded_disc)
         {
+            int column = _random.get_int(board_size);
+
+            for(int retry = 0; retry < board_size && column_heights[column] >= 4; ++retry)
+            {
+                column = (column + 1) % board_size;
+            }
+
             int ignored_row = 0;
-            _board.drop(seeded_disc % board_size, _generate_numbered_piece(), ignored_row);
+            _board.drop(column, _generate_numbered_piece(), ignored_row);
+            ++column_heights[column];
         }
     }
 

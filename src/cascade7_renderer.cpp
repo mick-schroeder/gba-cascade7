@@ -571,10 +571,10 @@ namespace cascade7
             _text_generator.generate(sidebar_x, -32, "SCHROEDER", _text_sprites);
             const bn::string_view header_text = game.status_timer() > 0 ? bn::string_view(game.status_text()) :
                                                 (game.mode() == game_mode::fast ? bn::string_view("FAST MODE") :
-                                                                                  bn::string_view(""));
+                                                                                  bn::string_view("STANDARD"));
             _text_generator.generate(sidebar_x, -15, header_text, _text_sprites);
             _draw_stat_block(0, "SCORE", game.score());
-            _draw_stat_block(24, "HIGH", game.high_score());
+            _draw_stat_block(24, "HIGH SCORE", game.high_score());
             _draw_stat_line(48, "LEVEL", game.level());
             const bool rise_danger = game.blocks_remaining() <= 3;
             const char* rise_label = rise_danger && ((_animation_frame / 10) & 1) ? "RISE!" : "RISE";
