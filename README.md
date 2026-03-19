@@ -10,7 +10,13 @@ CASCADE7 is an open-source Game Boy Advance puzzle game inspired by Drop7.
 
 ## Overview
 
-CASCADE7 is a 7x7 cascade puzzle game for Game Boy Advance. Each turn, the player drops a disc into one of seven columns. Discs are numbered `1-7` or blank, and numbered discs clear when their value matches the contiguous occupied run length in their row or column. Clears also strike adjacent blanks: the first hit cracks a blank disc, and the second hit reveals it as a numbered disc. After a set number of turns, a full row rises from the bottom of the board, increasing the pressure. There is no time limit, and the goal is to survive as long as possible by creating clears, triggering cascades, and pushing for high scores. Clearing the entire board awards a `70,000` point bonus.
+CASCADE7 is an open-source puzzle game for Game Boy Advance. Each turn, the player drops a numbered disc into one of seven columns. Discs are numbered `1-7` or blank, numbered discs clear when their value matches the same number of discs in their row or column. Clears also strike adjacent blanks: the first hit cracks a blank disc, and the second hit reveals it as a numbered disc. After a set number of turns, a full row rises from the bottom of the board. There is no time limit, and the goal is to survive as long as possible by creating clears, triggering cascades, and pushing for high scores. Clearing the entire board awards a `70,000` point bonus.
+
+## Install
+
+<a href="https://github.com/mick-schroeder/gba-cascade7/releases">
+  <img src="https://img.shields.io/badge/Download_ROMs_from_the_Releases_tab-8A2BE2?&logo=github" alt="Download ROM" width="500">
+</a>
 
 ## Controls
 
@@ -21,16 +27,21 @@ CASCADE7 is a 7x7 cascade puzzle game for Game Boy Advance. Each turn, the playe
 
 ## Rules
 
-- Board size is `7x7`
-- Numbered discs clear when their value matches the same number of discs in their row or column
-- Blank discs crack on the first adjacent hit and reveal into numbered discs on the next hit
-- The bottom row rises after a countdown and speeds up as levels increase
+- **GAME BOARD** - You drop one disc at a time into any of the seven columns. Discs are either numbered (1–7) or blank.
+- **CLEARING DISCS:** Numbered discs clear when their value matches the same number of discs in their row or column.
+- **BLANK DISCS** - Blank discs crack on the first adjacent hit and reveal into numbered discs on the next hit.
+- **LEVEL UP** - After a set number of drops, the "level" increases, and a new row of blank discs is pushed up from the bottom of the grid.
+- **GAME OVER** - The game ends when the column overflows at the top of the board.
 
-## Install
+### Scoring
 
-<a href="https://github.com/mick-schroeder/gba-cascade7/releases">
-  <img src="https://img.shields.io/badge/Download_ROMs_from_the_Releases_tab-8A2BE2?&logo=github" alt="Download ROM" width="500">
-</a>
+- **CASCADE** - Create a `CASCADE` by triggering a sequence of successive matches to score more points.
+- **CLEAR** - Clear the entire board to score a `70,000` point bonus.
+
+### Game Modes
+
+- **STANDARD** - A standard mix of numbered and blank discs with increasing level frequency.
+- **FAST** - Faster gameplay with only 5 drops per level and no blank discs to drop.
 
 ## Build
 
