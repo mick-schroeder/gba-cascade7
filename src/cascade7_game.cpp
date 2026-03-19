@@ -23,11 +23,11 @@ namespace cascade7
         constexpr int clear_frames = 12;
         constexpr int gravity_step_frames = 3;
         constexpr int rise_frames = 18;
-        constexpr int starting_turns_per_level = 30;
-        constexpr int minimum_turns_per_level = 6;
+        constexpr int starting_turns_per_level = 29;
+        constexpr int minimum_turns_per_level = 5;
         constexpr int initial_repeat_frames = 8;
         constexpr int held_repeat_frames = 3;
-        constexpr std::array<int, max_disc_value + 1> base_value_weights = { 0, 100, 100, 110, 110, 100, 90, 110 };
+        constexpr std::array<int, max_disc_value + 1> base_value_weights = { 0, 102, 94, 96, 110, 92, 80, 112 };
         constexpr const char save_format_tag[] = "C7SAVE1";
         constexpr int clear_sound_priority = 0;
         constexpr int crack_sound_priority = 1;
@@ -38,7 +38,10 @@ namespace cascade7
 
         [[nodiscard]] constexpr int turns_for_level(int level)
         {
-            const int turns = starting_turns_per_level - ((level - 1) / 2) - bn::max(level - 6, 0);
+            // The extracted Drop7 sequence declines by one turn per level until it
+            // hits a short late-game floor. Keep the same pacing shape, but keep
+            // actual piece values random.
+            const int turns = starting_turns_per_level - level + 1;
             return turns > minimum_turns_per_level ? turns : minimum_turns_per_level;
         }
     }
@@ -618,95 +621,37 @@ namespace cascade7
     int game::_generate_value(bool prefer_high_values, bool prefer_low_values, bool unique_only,
                               const std::array<bool, max_disc_value + 1>& used_values)
     {
-        // Piece values stay random, but the weights bias toward numbers that are
-        // more likely to matter on the current board.
+        // Keep values random, but with a light distribution shape and recent-piece
+        // dampening so the game avoids obvious streaks.
         std::array<int, max_disc_value + 1> weights = base_value_weights;
         int occupied_cells = 0;
-        int blank_cells = 0;
 
         for(int row = 0; row < board_size; ++row)
         {
             for(int column = 0; column < board_size; ++column)
             {
-                const cell& board_cell = _board.at(row, column);
-
-                if(! board_cell.occupied())
+                if(_board.at(row, column).occupied())
                 {
-                    continue;
-                }
-
-                ++occupied_cells;
-
-                if(board_cell.blank() || board_cell.cracked_blank())
-                {
-                    ++blank_cells;
-                }
-
-                if(board_cell.numbered())
-                {
-                    int horizontal_span = 1;
-
-                    for(int left = column - 1; left >= 0 && _board.at(row, left).occupied(); --left)
-                    {
-                        ++horizontal_span;
-                    }
-
-                    for(int right = column + 1; right < board_size && _board.at(row, right).occupied(); ++right)
-                    {
-                        ++horizontal_span;
-                    }
-
-                    int vertical_span = 1;
-
-                    for(int up = row - 1; up >= 0 && _board.at(up, column).occupied(); --up)
-                    {
-                        ++vertical_span;
-                    }
-
-                    for(int down = row + 1; down < board_size && _board.at(down, column).occupied(); ++down)
-                    {
-                        ++vertical_span;
-                    }
-
-                    for(int value = min_disc_value; value <= max_disc_value; ++value)
-                    {
-                        if(value == horizontal_span || value == vertical_span)
-                        {
-                            weights[value] += 20;
-                        }
-                        else if(value == horizontal_span - 1 || value == horizontal_span + 1 ||
-                                value == vertical_span - 1 || value == vertical_span + 1)
-                        {
-                            weights[value] += 8;
-                        }
-                    }
+                    ++occupied_cells;
                 }
             }
         }
 
         if(occupied_cells <= 14 || prefer_low_values)
         {
-            weights[1] += 15;
-            weights[2] += 12;
-            weights[3] += 10;
-            weights[6] -= 8;
-            weights[7] -= 12;
+            weights[1] += 14;
+            weights[2] += 8;
+            weights[3] += 8;
+            weights[6] -= 6;
+            weights[7] -= 4;
         }
         else if(occupied_cells >= 26 || prefer_high_values)
         {
-            weights[1] -= 10;
-            weights[2] -= 6;
+            weights[1] -= 8;
+            weights[2] -= 5;
             weights[5] += 8;
             weights[6] += 12;
-            weights[7] += 15;
-        }
-
-        if(blank_cells >= 9)
-        {
-            weights[1] += 8;
-            weights[2] += 8;
-            weights[6] -= 6;
-            weights[7] -= 8;
+            weights[7] += 14;
         }
 
         for(int index = 0; index < _recent_piece_count; ++index)
@@ -767,9 +712,9 @@ namespace cascade7
 
     int game::_blank_spawn_chance() const
     {
-        // Blank pressure rises with level and danger, then backs off if the board
-        // is already saturated with blanks.
-        int occupied_cells = 0;
+        // Blank pressure should be readable and predictable: slowly increase with
+        // level, spike a bit near row rise, and back off if blanks are already
+        // stacking up.
         int blank_cells = 0;
 
         for(int row = 0; row < board_size; ++row)
@@ -778,45 +723,34 @@ namespace cascade7
             {
                 const cell& board_cell = _board.at(row, column);
 
-                if(board_cell.occupied())
+                if(board_cell.blank() || board_cell.cracked_blank())
                 {
-                    ++occupied_cells;
-
-                    if(board_cell.blank() || board_cell.cracked_blank())
-                    {
-                        ++blank_cells;
-                    }
+                    ++blank_cells;
                 }
             }
         }
 
-        int chance = 14 + bn::min(_level - 1, 7);
-
-        if(_level <= 2)
-        {
-            chance -= 2;
-        }
+        int chance = 18 + bn::min(_level - 1, 8);
 
         if(_turns_until_rise <= 2)
         {
-            chance += 4;
+            chance += 5;
         }
         else if(_turns_until_rise <= 4)
         {
-            chance += 2;
+            chance += 3;
         }
 
-        if(_last_clear_count == 0 && occupied_cells >= 20)
+        if(_last_clear_count == 0)
         {
             chance += 2;
         }
 
-        if(blank_cells >= 7)
+        if(blank_cells >= 8)
         {
-            chance -= 10;
+            chance -= 9;
         }
-
-        if(occupied_cells >= 32)
+        else if(blank_cells >= 5)
         {
             chance -= 4;
         }
@@ -825,10 +759,10 @@ namespace cascade7
            _recent_piece_kinds[0] == cell_kind::blank &&
            _recent_piece_kinds[1] == cell_kind::blank)
         {
-            chance -= 12;
+            chance -= 14;
         }
 
-        return bn::clamp(chance, 8, 30);
+        return bn::clamp(chance, 12, 34);
     }
 
     void game::_move_cursor(int delta)
@@ -1117,7 +1051,7 @@ namespace cascade7
             }
 
             const int distinct_columns = 6 + _random.get_int(2);
-            const int blank_budget = _level <= 2 ? _random.get_int(2) : 1 + _random.get_int(2);
+            const int blank_budget = _level <= 2 ? 1 : 1 + _random.get_int(2);
             int blanks_used = 0;
             bool placement_failed = false;
 
@@ -1133,7 +1067,7 @@ namespace cascade7
                 bool prefer_low_values = seeded_disc < 4;
                 cell new_cell = _generate_numbered_piece();
 
-                if(blanks_used < blank_budget && _random.get_int(100) < (_level <= 2 ? 14 : 22))
+                if(blanks_used < blank_budget && _random.get_int(100) < (_level <= 2 ? 18 : 24))
                 {
                     new_cell = cell{cell_kind::blank, _generate_value(false, prefer_low_values)};
                     _remember_generated_piece(new_cell);
@@ -1243,15 +1177,37 @@ namespace cascade7
         // Rise rows use a separate generator so they feel authored instead of
         // like seven unrelated random blanks.
         static const int count_patterns[][board_size] = {
-            { 2, 2, 2, 1, 0, 0, 0 },
-            { 3, 2, 1, 1, 0, 0, 0 },
             { 2, 2, 1, 1, 1, 0, 0 },
-            { 3, 1, 1, 1, 1, 0, 0 }
+            { 2, 2, 2, 1, 0, 0, 0 },
+            { 3, 1, 1, 1, 1, 0, 0 },
+            { 2, 1, 1, 1, 1, 1, 0 },
+            { 3, 2, 1, 1, 0, 0, 0 }
         };
 
-        const int max_pattern_index = _level <= 3 ? 3 : 4;
-        const int pattern_index = _random.get_int(max_pattern_index);
-        const int distinct_values = count_patterns[pattern_index][4] ? 5 : 4;
+        int pattern_index = 0;
+
+        if(_level <= 4)
+        {
+            pattern_index = _random.get_int(3);
+        }
+        else if(_level <= 12)
+        {
+            const int roll = _random.get_int(100);
+            pattern_index = roll < 45 ? 0 : (roll < 70 ? 1 : (roll < 90 ? 3 : 2));
+        }
+        else
+        {
+            const int roll = _random.get_int(100);
+            pattern_index = roll < 40 ? 0 : (roll < 60 ? 1 : (roll < 76 ? 3 : (roll < 95 ? 2 : 4)));
+        }
+
+        int distinct_values = 0;
+
+        while(distinct_values < board_size && count_patterns[pattern_index][distinct_values] > 0)
+        {
+            ++distinct_values;
+        }
+
         std::array<bool, max_disc_value + 1> used_values = {};
         std::array<int, board_size> row_values = {};
         int write_index = 0;

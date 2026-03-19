@@ -517,17 +517,17 @@ namespace cascade7
         }
         else if(game.overlay() == overlay_mode::pause_menu)
         {
-            _text_generator.generate(-108, -8, "PAUSED", _text_sprites);
-            _text_generator.generate(sidebar_x, 12, game.menu_selection() == 0 ? "> CONTINUE" : "  CONTINUE",
+            _text_generator.generate(-108, -16, "PAUSED", _text_sprites);
+            _text_generator.generate(sidebar_x, 4, game.menu_selection() == 0 ? "> CONTINUE" : "  CONTINUE",
                                      _text_sprites);
-            _text_generator.generate(sidebar_x, 24, game.menu_selection() == 1 ? "> HELP" : "  HELP",
+            _text_generator.generate(sidebar_x, 16, game.menu_selection() == 1 ? "> HELP" : "  HELP",
                                      _text_sprites);
-            _text_generator.generate(sidebar_x, 36, game.menu_selection() == 2 ? "> ABOUT" : "  ABOUT",
+            _text_generator.generate(sidebar_x, 28, game.menu_selection() == 2 ? "> ABOUT" : "  ABOUT",
                                      _text_sprites);
-            _text_generator.generate(sidebar_x, 48, game.menu_selection() == 3 ? "> NEW GAME" : "  NEW GAME",
+            _text_generator.generate(sidebar_x, 42, game.menu_selection() == 3 ? "> NEW GAME" : "  NEW GAME",
                                      _text_sprites);
-            _text_generator.generate(sidebar_x, 70, "A CONFIRM", _text_sprites);
-            _text_generator.generate(sidebar_x, 80, "B CANCEL", _text_sprites);
+            _text_generator.generate(sidebar_x, 62, "A CONFIRM", _text_sprites);
+            _text_generator.generate(sidebar_x, 72, "B CANCEL", _text_sprites);
         }
         else if(game.overlay() == overlay_mode::help_screen)
         {
@@ -541,20 +541,20 @@ namespace cascade7
         else if(game.overlay() == overlay_mode::about_screen)
         {
             _text_generator.generate(sidebar_x, -18, "CASCADE7", _text_sprites);
-            _text_generator.generate(sidebar_x, -2, "BY MICK SCHROEDER", _text_sprites);
-            _text_generator.generate(sidebar_x, 10, "CASCADE7.MICKSCHROEDER.COM", _text_sprites);
+            _text_generator.generate(sidebar_x, -6, "BY MICK SCHROEDER", _text_sprites);
+            _text_generator.generate(sidebar_x, 10, "MICKSCHROEDER.COM", _text_sprites);
             _text_generator.generate(sidebar_x, 28, "B BACK", _text_sprites);
         }
         else
         {
-            _text_generator.generate(sidebar_x, -30, "BY MICK", _text_sprites);
-            _text_generator.generate(sidebar_x, -20, "SCHROEDER", _text_sprites);
-            _draw_stat_line(28, "SCORE", game.score());
-            _draw_stat_line(44, "HIGH", game.high_score());
-            _draw_stat_line(60, "LEVEL", game.level());
+            _text_generator.generate(sidebar_x, -35, "BY MICK", _text_sprites);
+            _text_generator.generate(sidebar_x, -25, "SCHROEDER", _text_sprites);
+            _draw_stat_block(0, "SCORE", game.score());
+            _draw_stat_block(24, "HIGH", game.high_score());
+            _draw_stat_line(48, "LEVEL", game.level());
             const bool rise_danger = game.blocks_remaining() <= 3;
             const char* rise_label = rise_danger && ((_animation_frame / 10) & 1) ? "RISE!" : "RISE";
-            _draw_stat_line(76, rise_label, game.blocks_remaining());
+            _draw_stat_line(64, rise_label, game.blocks_remaining());
 
             if(game.score_popup_timer() > 0)
             {
@@ -590,5 +590,13 @@ namespace cascade7
 
         bn::string<16> value_text = bn::to_string<10>(value);
         _text_generator.generate(sidebar_value_x, y, value_text, _text_sprites);
+    }
+
+    void renderer::_draw_stat_block(int y, const char* label, int value)
+    {
+        _text_generator.generate(hud_x, y, label, _text_sprites);
+
+        bn::string<16> value_text = bn::to_string<10>(value);
+        _text_generator.generate(hud_x + 8, y + 10, value_text, _text_sprites);
     }
 }

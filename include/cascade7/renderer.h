@@ -33,6 +33,7 @@ namespace cascade7
         void _update_cascade_effects(const game& game);
         void _draw_hud_text(const game& game);
         void _draw_stat_line(int y, const char* label, int value);
+        void _draw_stat_block(int y, const char* label, int value);
 
         bn::camera_ptr _camera;
         bn::regular_bg_ptr _logo_bg;
