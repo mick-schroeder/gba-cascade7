@@ -17,6 +17,55 @@ namespace cascade7
             char format_tag[8] = {};
             int standard_high_score = 0;
             int fast_high_score = 0;
+            bool has_run_state = false;
+            int mode = 0;
+            std::array<cell, board_size * board_size> board_cells{};
+            cell next_piece;
+            clear_mask pending_clear_mask;
+            int cursor_column = board_size / 2;
+            int score = 0;
+            int level = 1;
+            int turn = 0;
+            int highest_chain = 0;
+            int discs_cleared = 0;
+            int last_move_score = 0;
+            int score_popup_value = 0;
+            int score_popup_chain = 0;
+            int score_popup_timer = 0;
+            int last_clear_count = 0;
+            int last_chain_count = 0;
+            int blocks_remaining = 5;
+            int max_blocks = 5;
+            int phase_timer = 0;
+            int cascade_cleared_cells = 0;
+            int cascade_chain_count = 0;
+            int turns_until_rise = 5;
+            int cursor_repeat_frames = 0;
+            int cursor_repeat_direction = 0;
+            int menu_selection = 0;
+            int blank_effect_timer = 0;
+            int cracked_blank_count = 0;
+            int revealed_blank_count = 0;
+            int landing_timer = 0;
+            int last_drop_row = -1;
+            int last_drop_column = -1;
+            int all_clear_timer = 0;
+            int rise_impact_timer = 0;
+            int level_up_timer = 0;
+            int status_timer = 0;
+            bool game_over = false;
+            bool has_pending_rise_row = false;
+            int phase = 0;
+            int overlay = 0;
+            int mode_select_return_overlay = 0;
+            std::array<cell, board_size> pending_rise_row{};
+            std::array<bool, board_size * board_size> cracked_effect_mask{};
+            std::array<bool, board_size * board_size> revealed_effect_mask{};
+            std::array<int, 4> recent_piece_values{};
+            std::array<cell_kind, 4> recent_piece_kinds{};
+            int recent_piece_count = 0;
+            char status[48] = {};
+            bn::random random;
         };
 
         constexpr int settle_frames = 6;
@@ -62,7 +111,6 @@ namespace cascade7
         _next_piece(cell{cell_kind::numbered, 1})
     {
         _load_save();
-        _reset_new_game();
     }
 
     void game::update()
@@ -443,6 +491,7 @@ namespace cascade7
     {
         _overlay = overlay_mode::game_over_menu;
         _menu_selection = 0;
+        _store_save();
     }
 
     void game::_open_mode_select(overlay_mode return_overlay)
@@ -970,6 +1019,7 @@ namespace cascade7
     {
         _status = text;
         _status_timer = status_frames;
+        _store_save();
     }
 
     void game::_set_score_status(const char* prefix, int score)
@@ -1007,6 +1057,79 @@ namespace cascade7
         {
             _high_scores[0] = stored_data.standard_high_score;
             _high_scores[1] = stored_data.fast_high_score;
+            if(stored_data.has_run_state)
+            {
+                _mode = stored_data.mode == 1 ? game_mode::fast : game_mode::standard;
+
+                for(int row = 0; row < board_size; ++row)
+                {
+                    for(int column = 0; column < board_size; ++column)
+                    {
+                        _board.at(row, column) = stored_data.board_cells[(row * board_size) + column];
+                    }
+                }
+
+                _next_piece = stored_data.next_piece;
+                _pending_clear_mask = stored_data.pending_clear_mask;
+                _cursor_column = stored_data.cursor_column;
+                _score = stored_data.score;
+                _level = stored_data.level;
+                _turn = stored_data.turn;
+                _highest_chain = stored_data.highest_chain;
+                _discs_cleared = stored_data.discs_cleared;
+                _last_move_score = stored_data.last_move_score;
+                _score_popup_value = stored_data.score_popup_value;
+                _score_popup_chain = stored_data.score_popup_chain;
+                _score_popup_timer = stored_data.score_popup_timer;
+                _last_clear_count = stored_data.last_clear_count;
+                _last_chain_count = stored_data.last_chain_count;
+                _blocks_remaining = stored_data.blocks_remaining;
+                _max_blocks = stored_data.max_blocks;
+                _phase_timer = stored_data.phase_timer;
+                _cascade_cleared_cells = stored_data.cascade_cleared_cells;
+                _cascade_chain_count = stored_data.cascade_chain_count;
+                _turns_until_rise = stored_data.turns_until_rise;
+                _cursor_repeat_frames = stored_data.cursor_repeat_frames;
+                _cursor_repeat_direction = stored_data.cursor_repeat_direction;
+                _menu_selection = stored_data.menu_selection;
+                _blank_effect_timer = stored_data.blank_effect_timer;
+                _cracked_blank_count = stored_data.cracked_blank_count;
+                _revealed_blank_count = stored_data.revealed_blank_count;
+                _landing_timer = stored_data.landing_timer;
+                _last_drop_row = stored_data.last_drop_row;
+                _last_drop_column = stored_data.last_drop_column;
+                _all_clear_timer = stored_data.all_clear_timer;
+                _rise_impact_timer = stored_data.rise_impact_timer;
+                _level_up_timer = stored_data.level_up_timer;
+                _status_timer = stored_data.status_timer;
+                _game_over = stored_data.game_over;
+                _has_pending_rise_row = stored_data.has_pending_rise_row;
+                _phase = resolution_phase(stored_data.phase);
+                _overlay = overlay_mode(stored_data.overlay);
+                _mode_select_return_overlay = overlay_mode(stored_data.mode_select_return_overlay);
+                _pending_rise_row = stored_data.pending_rise_row;
+                _cracked_effect_mask = stored_data.cracked_effect_mask;
+                _revealed_effect_mask = stored_data.revealed_effect_mask;
+                _recent_piece_values = stored_data.recent_piece_values;
+                _recent_piece_kinds = stored_data.recent_piece_kinds;
+                _recent_piece_count = stored_data.recent_piece_count;
+                _status.clear();
+
+                for(char character : stored_data.status)
+                {
+                    if(! character)
+                    {
+                        break;
+                    }
+
+                    _status += character;
+                }
+
+                _random = stored_data.random;
+                return;
+            }
+
+            _reset_new_game();
             return;
         }
 
@@ -1024,6 +1147,83 @@ namespace cascade7
         new_data.standard_high_score = 0;
         new_data.fast_high_score = 0;
         bn::sram::write(new_data);
+        _reset_new_game();
+    }
+
+    void game::_store_save() const
+    {
+        save_data stored_data;
+
+        for(int index = 0; index < 8; ++index)
+        {
+            stored_data.format_tag[index] = save_format_tag[index];
+        }
+
+        stored_data.standard_high_score = _high_scores[0];
+        stored_data.fast_high_score = _high_scores[1];
+        stored_data.has_run_state = true;
+        stored_data.mode = mode_index(_mode);
+
+        for(int row = 0; row < board_size; ++row)
+        {
+            for(int column = 0; column < board_size; ++column)
+            {
+                stored_data.board_cells[(row * board_size) + column] = _board.at(row, column);
+            }
+        }
+
+        stored_data.next_piece = _next_piece;
+        stored_data.pending_clear_mask = _pending_clear_mask;
+        stored_data.cursor_column = _cursor_column;
+        stored_data.score = _score;
+        stored_data.level = _level;
+        stored_data.turn = _turn;
+        stored_data.highest_chain = _highest_chain;
+        stored_data.discs_cleared = _discs_cleared;
+        stored_data.last_move_score = _last_move_score;
+        stored_data.score_popup_value = _score_popup_value;
+        stored_data.score_popup_chain = _score_popup_chain;
+        stored_data.score_popup_timer = _score_popup_timer;
+        stored_data.last_clear_count = _last_clear_count;
+        stored_data.last_chain_count = _last_chain_count;
+        stored_data.blocks_remaining = _blocks_remaining;
+        stored_data.max_blocks = _max_blocks;
+        stored_data.phase_timer = _phase_timer;
+        stored_data.cascade_cleared_cells = _cascade_cleared_cells;
+        stored_data.cascade_chain_count = _cascade_chain_count;
+        stored_data.turns_until_rise = _turns_until_rise;
+        stored_data.cursor_repeat_frames = _cursor_repeat_frames;
+        stored_data.cursor_repeat_direction = _cursor_repeat_direction;
+        stored_data.menu_selection = _menu_selection;
+        stored_data.blank_effect_timer = _blank_effect_timer;
+        stored_data.cracked_blank_count = _cracked_blank_count;
+        stored_data.revealed_blank_count = _revealed_blank_count;
+        stored_data.landing_timer = _landing_timer;
+        stored_data.last_drop_row = _last_drop_row;
+        stored_data.last_drop_column = _last_drop_column;
+        stored_data.all_clear_timer = _all_clear_timer;
+        stored_data.rise_impact_timer = _rise_impact_timer;
+        stored_data.level_up_timer = _level_up_timer;
+        stored_data.status_timer = _status_timer;
+        stored_data.game_over = _game_over;
+        stored_data.has_pending_rise_row = _has_pending_rise_row;
+        stored_data.phase = int(_phase);
+        stored_data.overlay = int(_overlay);
+        stored_data.mode_select_return_overlay = int(_mode_select_return_overlay);
+        stored_data.pending_rise_row = _pending_rise_row;
+        stored_data.cracked_effect_mask = _cracked_effect_mask;
+        stored_data.revealed_effect_mask = _revealed_effect_mask;
+        stored_data.recent_piece_values = _recent_piece_values;
+        stored_data.recent_piece_kinds = _recent_piece_kinds;
+        stored_data.recent_piece_count = _recent_piece_count;
+        for(int index = 0; index < _status.size() && index < 47; ++index)
+        {
+            stored_data.status[index] = _status[index];
+        }
+
+        stored_data.status[bn::min(_status.size(), 47)] = 0;
+        stored_data.random = _random;
+        bn::sram::write(stored_data);
     }
 
     void game::_store_high_score_if_needed()
@@ -1037,16 +1237,7 @@ namespace cascade7
 
         _high_scores[current_mode_index] = _score;
 
-        save_data stored_data;
-
-        for(int index = 0; index < 8; ++index)
-        {
-            stored_data.format_tag[index] = save_format_tag[index];
-        }
-
-        stored_data.standard_high_score = _high_scores[0];
-        stored_data.fast_high_score = _high_scores[1];
-        bn::sram::write(stored_data);
+        _store_save();
     }
 
     void game::_raise_blank_row()
@@ -1122,7 +1313,7 @@ namespace cascade7
 
     void game::_seed_opening_board()
     {
-        constexpr int seeded_disc_count = 7;
+        constexpr int seeded_disc_count = 9;
         const std::array<int, 4> starting_recent_values = _recent_piece_values;
         const std::array<cell_kind, 4> starting_recent_kinds = _recent_piece_kinds;
         const int starting_recent_count = _recent_piece_count;
@@ -1136,28 +1327,71 @@ namespace cascade7
             _recent_piece_kinds = starting_recent_kinds;
             _recent_piece_count = starting_recent_count;
 
-            std::array<int, board_size> columns = { 0, 1, 2, 3, 4, 5, 6 };
-
-            for(int index = board_size - 1; index > 0; --index)
-            {
-                const int swap_index = _random.get_int(index + 1);
-                const int temp = columns[index];
-                columns[index] = columns[swap_index];
-                columns[swap_index] = temp;
-            }
-
-            const int distinct_columns = 6 + _random.get_int(2);
             const int blank_budget = _mode == game_mode::fast ? 0 : (_level <= 2 ? 1 : 1 + _random.get_int(2));
             int blanks_used = 0;
             bool placement_failed = false;
+            std::array<int, board_size> column_heights = {};
+            std::array<bool, board_size> used_columns = {};
+            const int target_columns = 4 + _random.get_int(3);
 
             for(int seeded_disc = 0; seeded_disc < seeded_disc_count; ++seeded_disc)
             {
-                int column = columns[seeded_disc % distinct_columns];
+                std::array<int, board_size> column_weights = {};
+                int total_weight = 0;
 
-                if(seeded_disc >= distinct_columns)
+                for(int column = 0; column < board_size; ++column)
                 {
-                    column = columns[_random.get_int(distinct_columns)];
+                    if(column_heights[column] >= 4)
+                    {
+                        continue;
+                    }
+
+                    int weight = 12;
+
+                    if(! used_columns[column])
+                    {
+                        weight = used_columns[0] || used_columns[1] || used_columns[2] ||
+                                 used_columns[3] || used_columns[4] || used_columns[5] || used_columns[6] ?
+                                 (int(used_columns[0]) + int(used_columns[1]) + int(used_columns[2]) +
+                                  int(used_columns[3]) + int(used_columns[4]) + int(used_columns[5]) +
+                                  int(used_columns[6]) < target_columns ? 28 : 6) :
+                                 28;
+                    }
+                    else
+                    {
+                        weight += column_heights[column] * 10;
+                    }
+
+                    if(column_heights[column] == 0)
+                    {
+                        weight += 6;
+                    }
+
+                    column_weights[column] = weight;
+                    total_weight += weight;
+                }
+
+                if(total_weight <= 0)
+                {
+                    break;
+                }
+
+                int roll = _random.get_int(total_weight);
+                int column = 0;
+
+                for(; column < board_size; ++column)
+                {
+                    roll -= column_weights[column];
+
+                    if(roll < 0)
+                    {
+                        break;
+                    }
+                }
+
+                if(column >= board_size)
+                {
+                    column = board_size - 1;
                 }
 
                 bool prefer_low_values = seeded_disc < 4;
@@ -1177,6 +1411,9 @@ namespace cascade7
                     placement_failed = true;
                     break;
                 }
+
+                used_columns[column] = true;
+                ++column_heights[column];
             }
 
             if(placement_failed || rules::find_matches(_board).count)
@@ -1250,7 +1487,21 @@ namespace cascade7
                 distinct_values += seen_values[value];
             }
 
-            if(occupied_columns >= 6 && max_column_height <= 2 && distinct_values >= 4 && promising_cells >= 2)
+            const int bottom_row_count = [&]() {
+                int count = 0;
+
+                for(int column = 0; column < board_size; ++column)
+                {
+                    count += _board.at(board_size - 1, column).occupied();
+                }
+
+                return count;
+            }();
+
+            if(occupied_columns >= 4 && occupied_columns <= 6 &&
+               max_column_height >= 2 && max_column_height <= 4 &&
+               bottom_row_count <= 6 &&
+               distinct_values >= 4 && promising_cells >= 2)
             {
                 return;
             }
@@ -1264,61 +1515,91 @@ namespace cascade7
         for(int seeded_disc = 0; seeded_disc < seeded_disc_count; ++seeded_disc)
         {
             int ignored_row = 0;
-            _board.drop(seeded_disc, _generate_numbered_piece(), ignored_row);
+            _board.drop(seeded_disc % board_size, _generate_numbered_piece(), ignored_row);
         }
     }
 
     void game::_generate_rise_row()
     {
-        // Rise rows use a separate generator so they feel authored instead of
-        // like seven unrelated random blanks.
-        static const int count_patterns[][board_size] = {
-            { 2, 2, 1, 1, 1, 0, 0 },
-            { 2, 2, 2, 1, 0, 0, 0 },
-            { 3, 1, 1, 1, 1, 0, 0 },
-            { 2, 1, 1, 1, 1, 1, 0 },
-            { 3, 2, 1, 1, 0, 0, 0 }
-        };
-
-        int pattern_index = 0;
-
-        if(_level <= 4)
-        {
-            pattern_index = _random.get_int(3);
-        }
-        else if(_level <= 12)
-        {
-            const int roll = _random.get_int(100);
-            pattern_index = roll < 45 ? 0 : (roll < 70 ? 1 : (roll < 90 ? 3 : 2));
-        }
-        else
-        {
-            const int roll = _random.get_int(100);
-            pattern_index = roll < 40 ? 0 : (roll < 60 ? 1 : (roll < 76 ? 3 : (roll < 95 ? 2 : 4)));
-        }
-
-        int distinct_values = 0;
-
-        while(distinct_values < board_size && count_patterns[pattern_index][distinct_values] > 0)
-        {
-            ++distinct_values;
-        }
-
-        std::array<bool, max_disc_value + 1> used_values = {};
+        // Rise rows stay random, but constrained so they don't degenerate into
+        // ugly floods of the same value.
         std::array<int, board_size> row_values = {};
-        int write_index = 0;
 
-        for(int value_index = 0; value_index < distinct_values; ++value_index)
+        for(int attempt = 0; attempt < 16; ++attempt)
         {
-            const bool prefer_high_values = _level >= 6;
-            const bool prefer_low_values = _level <= 3;
-            const int value = _generate_value(prefer_high_values, prefer_low_values, true, used_values);
-            used_values[value] = true;
+            std::array<bool, max_disc_value + 1> used_values = {};
+            std::array<int, max_disc_value + 1> value_counts = {};
 
-            for(int repeat = 0; repeat < count_patterns[pattern_index][value_index]; ++repeat)
+            int distinct_values = 4 + _random.get_int(3);
+
+            if(_level <= 3)
             {
+                distinct_values = 5 + _random.get_int(2);
+            }
+
+            distinct_values = bn::min(distinct_values, board_size);
+
+            std::array<int, board_size> chosen_values = {};
+
+            for(int index = 0; index < distinct_values; ++index)
+            {
+                const bool prefer_high_values = _level >= 6;
+                const bool prefer_low_values = _level <= 3;
+                chosen_values[index] = _generate_value(prefer_high_values, prefer_low_values, true, used_values);
+                used_values[chosen_values[index]] = true;
+                row_values[index] = chosen_values[index];
+                value_counts[chosen_values[index]] = 1;
+            }
+
+            int write_index = distinct_values;
+            const int duplicate_cap = _level >= 18 ? 3 : 2;
+
+            while(write_index < board_size)
+            {
+                std::array<int, board_size> weights = {};
+                int total_weight = 0;
+
+                for(int index = 0; index < distinct_values; ++index)
+                {
+                    const int value = chosen_values[index];
+
+                    if(value_counts[value] >= duplicate_cap)
+                    {
+                        continue;
+                    }
+
+                    int weight = value_counts[value] == 1 ? 18 : 7;
+                    weights[index] = weight;
+                    total_weight += weight;
+                }
+
+                if(total_weight <= 0)
+                {
+                    break;
+                }
+
+                int roll = _random.get_int(total_weight);
+                int chosen_index = 0;
+
+                for(; chosen_index < distinct_values; ++chosen_index)
+                {
+                    roll -= weights[chosen_index];
+
+                    if(roll < 0)
+                    {
+                        break;
+                    }
+                }
+
+                const int value = chosen_values[bn::min(chosen_index, distinct_values - 1)];
                 row_values[write_index] = value;
+                ++value_counts[value];
                 ++write_index;
+            }
+
+            if(write_index == board_size)
+            {
+                break;
             }
         }
 

@@ -108,6 +108,7 @@ namespace cascade7
         void _set_status(const char* text);
         void _set_score_status(const char* prefix, int score);
         void _load_save();
+        void _store_save() const;
         void _store_high_score_if_needed();
         void _reset_empty();
         void _reset_new_game();
